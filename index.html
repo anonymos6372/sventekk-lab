@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' blob: data:; media-src 'self' blob: data:; img-src 'self' data:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' blob: data:; connect-src 'self' https://zrdturntjcdvazyrrskk.supabase.co; media-src 'self' blob: data:; img-src 'self' data:;">
   <title>SVENTEKK // Hardtekk &amp; Uptempo Sample Studio</title>
   <style>
     :root {
@@ -26,6 +26,11 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+    }
+
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     body {
@@ -78,6 +83,7 @@
       align-items: center;
       justify-content: center;
       font-size: 0.9rem;
+      flex-shrink: 0;
     }
 
     .credit-badge {
@@ -120,6 +126,7 @@
       justify-content: center;
       padding: 16px;
       z-index: 9999;
+      overflow-y: auto;
     }
 
     .modal-backdrop.open {
@@ -135,16 +142,19 @@
       padding: 26px;
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
       position: relative;
+      margin: auto;
     }
 
     .modal-close {
       position: absolute;
-      top: 14px;
-      right: 16px;
+      top: 12px;
+      right: 14px;
       background: transparent;
       border: none;
       color: var(--text-dim);
-      font-size: 1.3rem;
+      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
       cursor: pointer;
     }
 
@@ -162,7 +172,7 @@
       background: transparent;
       border: none;
       color: var(--text-dim);
-      padding: 8px;
+      padding: 9px;
       border-radius: 7px;
       font-weight: 700;
       font-size: 0.85rem;
@@ -193,7 +203,7 @@
       border-radius: 9px;
       padding: 11px 12px;
       color: var(--text-main);
-      font-size: 0.92rem;
+      font-size: 16px;
       outline: none;
     }
 
@@ -299,6 +309,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 10px;
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -317,6 +328,7 @@
       font-size: 1.2rem;
       font-weight: 800;
       color: var(--cyan);
+      white-space: nowrap;
     }
 
     .social-row {
@@ -371,9 +383,10 @@
       background: rgba(0, 240, 255, 0.1);
       padding: 3px 8px;
       border-radius: 6px;
+      flex-shrink: 0;
     }
 
-    /* GENERATOR GRID */
+    /* GENERATOR GRID (LAPTOP STANDARD) */
     .modules-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(355px, 1fr));
@@ -401,6 +414,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 8px;
       margin-bottom: 6px;
     }
 
@@ -417,6 +431,7 @@
       border-radius: 999px;
       background: rgba(0, 240, 255, 0.1);
       color: var(--cyan);
+      white-space: nowrap;
     }
 
     .chip.orange {
@@ -453,6 +468,7 @@
       cursor: pointer;
       transition: 0.12s;
       text-align: center;
+      touch-action: manipulation;
     }
 
     .style-btn.active {
@@ -490,6 +506,7 @@
       font-weight: 600;
       outline: none;
       cursor: pointer;
+      width: 100%;
     }
 
     .sliders {
@@ -528,6 +545,7 @@
       background: var(--bg-input);
       border-radius: 999px;
       outline: none;
+      touch-action: pan-y;
     }
 
     input[type="range"]::-webkit-slider-thumb {
@@ -560,12 +578,14 @@
       transition: 0.15s ease;
       text-align: center;
       text-decoration: none;
+      touch-action: manipulation;
     }
 
     .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
     .btn-cyan { background: var(--cyan); color: #05080d; }
     .btn-orange { background: var(--orange); color: #ffffff; }
-    .btn-purple { background: var(--purple); color: #ffffff; width: 100%; }
+    .btn-purple { background: var(--purple); color: #ffffff; }
     .btn-ghost { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); }
 
     /* SEQUENZER */
@@ -631,6 +651,7 @@
       border: 1px solid rgba(255, 85, 0, 0.5);
       background: rgba(255, 85, 0, 0.16);
       color: #ff945e;
+      touch-action: manipulation;
     }
 
     .voice-btn.poly {
@@ -658,11 +679,13 @@
       font-size: 0.72rem;
       color: var(--text-dim);
       user-select: none;
+      touch-action: manipulation;
     }
 
     .step-btn:nth-child(4n + 1) { border-color: rgba(255, 255, 255, 0.22); }
     .step-btn.on { background: var(--orange); color: #ffffff; font-weight: 700; }
     .step-btn.on.cyan { background: var(--cyan); color: #041014; }
+    .step-btn.on.purple { background: var(--purple); color: #ffffff; }
     .step-btn.now { outline: 2px solid #ffffff; transform: scale(1.07); }
 
     /* SAMPLE LIBRARY */
@@ -741,10 +764,101 @@
       margin-top: 44px;
     }
 
-    @media (max-width: 840px) {
-      .hero-bar { grid-template-columns: 1fr; }
-      .seq-row { grid-template-columns: 1fr; }
-      .seq-steps { grid-template-columns: repeat(8, 1fr); }
+    /* =========================================================================
+       MOBILE OPTIMIERUNG (NUR SMARTPHONES – LAPTOP BLEIBT UNVERÄNDERT)
+       ========================================================================= */
+
+    /* 1. HANDY HOCHFORMAT */
+    @media (max-width: 767px) {
+      body { padding: 10px 10px 44px; }
+      .account-topbar { padding: 8px 10px; margin-bottom: 10px; border-radius: 10px; gap: 8px; }
+      .user-avatar { width: 28px; height: 28px; font-size: 0.78rem; }
+      .credit-badge { font-size: 0.72rem; padding: 4px 8px; }
+      .timer-text { font-size: 0.7rem; }
+      .hero-bar { grid-template-columns: 1fr; padding: 14px; gap: 12px; margin-bottom: 16px; border-radius: 14px; }
+      .pill-badge { font-size: 0.65rem; padding: 3px 9px; margin-bottom: 6px; }
+      h1 { font-size: 1.35rem; margin-bottom: 4px; }
+      .hero-desc { font-size: 0.78rem; line-height: 1.35; }
+      .studio-status-box { padding: 10px 12px; gap: 8px; }
+      .status-display { padding: 8px 10px; }
+      #studio-status-text { font-size: 0.78rem; }
+      .bpm-readout { font-size: 0.95rem; }
+      .nav-pill { padding: 7px 10px; font-size: 0.75rem; }
+      .section-head { margin: 18px 0 10px; }
+      .section-title { font-size: 0.95rem; }
+      .modules-grid { grid-template-columns: 1fr; gap: 12px; }
+      .synth-card { padding: 13px; border-radius: 13px; }
+      .card-top h3 { font-size: 0.98rem; }
+      .card-sub { font-size: 0.75rem; margin-bottom: 9px; }
+      .style-pills { gap: 4px; margin-bottom: 10px; }
+      .style-btn { padding: 5px 4px; font-size: 0.68rem; }
+      .select-row { gap: 6px; margin-bottom: 9px; }
+      select { padding: 6px 8px; font-size: 0.76rem; }
+      .sliders { gap: 7px; margin-bottom: 11px; }
+      .slider-item label { font-size: 0.75rem; margin-bottom: 3px; }
+      .val-pill { font-size: 0.7rem; padding: 1px 6px; }
+      input[type="range"] { height: 5px; }
+      input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; }
+      .btn { padding: 7px 9px; font-size: 0.76rem; border-radius: 8px; }
+      .panel-box { padding: 13px; border-radius: 13px; }
+      .seq-header { margin-bottom: 12px; padding-bottom: 10px; gap: 8px; }
+      .seq-row { grid-template-columns: 1fr; gap: 5px; margin-bottom: 8px; }
+      .seq-steps { grid-template-columns: repeat(8, 1fr); gap: 4px; }
+      .step-btn { height: 28px; font-size: 0.66rem; border-radius: 6px; }
+      .sample-grid, .workflow-grid { grid-template-columns: 1fr; gap: 10px; }
+      .modal-card { padding: 18px 16px; }
+    }
+
+    /* 2. HANDY QUERFORMAT (Landscape: alles ultra-kompakt nebeneinander ins Display!) */
+    @media (max-width: 960px) and (max-height: 540px) and (orientation: landscape) {
+      body { padding: 8px 12px 30px; }
+      .account-topbar { padding: 6px 12px; margin-bottom: 8px; border-radius: 10px; }
+      .user-avatar { width: 24px; height: 24px; font-size: 0.72rem; }
+      .credit-badge { font-size: 0.7rem; padding: 3px 7px; }
+      .timer-text { font-size: 0.68rem; }
+      .hero-bar { grid-template-columns: 1.2fr 1fr; padding: 12px 14px; gap: 12px; margin-bottom: 14px; border-radius: 12px; }
+      .pill-badge { font-size: 0.62rem; padding: 2px 8px; margin-bottom: 4px; }
+      h1 { font-size: 1.2rem; margin-bottom: 3px; }
+      .hero-desc { font-size: 0.72rem; line-height: 1.3; }
+      .studio-status-box { padding: 8px 10px; gap: 6px; }
+      .status-top { font-size: 0.66rem; }
+      .status-display { padding: 6px 8px; }
+      #studio-status-text { font-size: 0.72rem; }
+      .bpm-readout { font-size: 0.9rem; }
+      .nav-pill { padding: 5px 8px; font-size: 0.7rem; }
+      .section-head { margin: 14px 0 8px; }
+      .section-title { font-size: 0.9rem; }
+      .modules-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .synth-card { padding: 10px 12px; border-radius: 12px; }
+      .synth-card:hover { transform: none; }
+      .card-top { margin-bottom: 3px; }
+      .card-top h3 { font-size: 0.92rem; }
+      .chip { font-size: 0.64rem; padding: 2px 7px; }
+      .card-sub { font-size: 0.7rem; margin-bottom: 7px; line-height: 1.25; }
+      .style-pills { gap: 4px; margin-bottom: 8px; }
+      .style-btn { padding: 4px 3px; font-size: 0.65rem; border-radius: 6px; }
+      .select-row { gap: 6px; margin-bottom: 7px; }
+      .select-group span { font-size: 0.65rem; }
+      select { padding: 4px 6px; font-size: 0.72rem; }
+      .sliders { gap: 5px; margin-bottom: 8px; }
+      .slider-item label { font-size: 0.7rem; margin-bottom: 2px; }
+      .val-pill { font-size: 0.66rem; padding: 1px 5px; }
+      input[type="range"] { height: 4px; }
+      input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; }
+      .actions { gap: 5px; }
+      .btn { padding: 6px 8px; font-size: 0.72rem; border-radius: 7px; }
+      .panel-box { padding: 12px; border-radius: 12px; }
+      .seq-header { margin-bottom: 10px; padding-bottom: 8px; gap: 8px; }
+      .seq-header h3 { font-size: 0.92rem; }
+      .seq-row { grid-template-columns: 145px 1fr; gap: 8px; margin-bottom: 6px; }
+      .seq-track-controls { padding: 4px 6px; }
+      .seq-label { font-size: 0.7rem; }
+      .voice-btn { font-size: 0.62rem; padding: 2px 5px; }
+      .seq-steps { grid-template-columns: repeat(16, 1fr); gap: 3px; }
+      .step-btn { height: 26px; font-size: 0.62rem; border-radius: 5px; }
+      .modal-card { padding: 14px 16px; max-width: 460px; }
+      .form-field { margin-bottom: 8px; }
+      .form-field input { padding: 7px 10px; font-size: 14px; }
     }
   </style>
 </head>
@@ -753,7 +867,7 @@
   <div id="auth-modal" class="modal-backdrop">
     <div class="modal-card">
       <button class="modal-close" onclick="closeAuthModal()">&times;</button>
-      <div class="pill-badge" style="margin-bottom: 6px;">SVENTEKK ACCOUNT</div>
+      <div class="pill-badge" style="margin-bottom: 6px;">SVENTEKK CLOUD ACCOUNT</div>
       <h2 id="auth-modal-title" style="font-size: 1.35rem;">Anmelden &amp; Sounds bauen</h2>
       <p style="color: var(--text-dim); font-size: 0.85rem; margin-top: 4px;">
         Kostenloses Konto: <strong>5 Gratis-Generierungen</strong> alle 24 Stunden.
@@ -780,12 +894,12 @@
       </div>
 
       <div class="security-note">
-        🔒 <strong>Datenschutz &amp; Sicherheit:</strong> Dein Passwort wird per SHA-256 verschlüsselt und verlässt deinen Browser nicht. Bitte verwende trotzdem kein echtes Haupt-Passwort.
+        🔒 <strong>Cloud-Sync &amp; Sicherheit:</strong> Dein Passwort wird vor dem Senden per SHA-256 gehasht. Dein Login bleibt gespeichert.
       </div>
 
       <div id="auth-error" class="auth-msg"></div>
 
-      <button class="btn btn-cyan" style="width: 100%;" onclick="submitAuth()">Weiter ins Studio</button>
+      <button id="btn-auth-submit" class="btn btn-cyan" style="width: 100%;" onclick="submitAuth()">Weiter ins Studio</button>
     </div>
   </div>
 
@@ -817,7 +931,7 @@
       <div class="user-info-group">
         <div class="user-avatar" id="ui-avatar">?</div>
         <div>
-          <div style="font-weight: 700; font-size: 0.92rem;" id="ui-username">Nicht angemeldet</div>
+          <div style="font-weight: 700; font-size: 0.92rem;" id="ui-username">Verbinde Cloud...</div>
           <div class="timer-text" id="ui-reset-timer">Bitte anmelden für 5 Gratis-Sounds / 24h</div>
         </div>
       </div>
@@ -836,17 +950,17 @@
     <!-- HEADER -->
     <header class="hero-bar">
       <div>
-        <div class="pill-badge"><span class="live-dot"></span> SVENTEKK AUDIO LAB // V3.6 SECURE</div>
+        <div class="pill-badge"><span class="live-dot"></span> SVENTEKK AUDIO LAB // V3.8 CLOUD</div>
         <h1>Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio</h1>
         <p class="hero-desc">
           6-in-1 Hard-Dance Kick Engine (Soft, Hard, Industrial, Gabber, Schranz &amp; Hard Techno),
-          Uptempo-Synthese, Snares, Hat-Rolls und Rave-Melodien direkt als 16-Bit .WAV.
+          Uptempo-Synthese, Snares, Hat-Rolls und 7 Rave-Melodie-Patterns direkt als 16-Bit .WAV.
         </p>
       </div>
 
       <div class="studio-status-box">
         <div class="status-top">
-          <span>WEB AUDIO ENGINE + LIMITER</span>
+          <span>WEB AUDIO ENGINE + CLOUD SYNC</span>
           <span>5 FREE / 24H</span>
         </div>
         <div class="status-display">
@@ -923,9 +1037,8 @@
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-ghost" onclick="zufallsHardtekkKick()" title="Zufälliger Kick">🎲</button>
-          <button class="btn btn-cyan" onclick="kickBauen(false)">▶ Anhören</button>
-          <button class="btn btn-orange" onclick="kickBauen(true)">⬇ .WAV</button>
+          <button type="button" class="btn btn-cyan" onclick="playHardtekkKick()">Anhören</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadHardtekkKick()">.WAV Export</button>
         </div>
       </div>
 
@@ -933,1267 +1046,1429 @@
       <div class="synth-card orange-theme">
         <div>
           <div class="card-top">
-            <h3>Uptempo Kick</h3>
-            <span class="chip orange">200–240 BPM</span>
+            <h3>Uptempo Piep / Zaag Kick</h3>
+            <span class="chip orange">200+ BPM</span>
           </div>
-          <p class="card-sub">Wähle zwischen Piezo, Zaag-Säge oder hohlem Industrial-Punch.</p>
-
-          <div class="select-row">
-            <div class="select-group">
-              <span>KICK CHARAKTER</span>
-              <select id="up_style">
-                <option value="piezo">Classic Piezo</option>
-                <option value="zaag">Zaag / Saw-Säge</option>
-                <option value="hollow">Hollow / Gated</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <span>TOK-KURVE</span>
-              <select id="up_curve">
-                <option value="16">Ultra-Kurz (16)</option>
-                <option value="10">Punchy (10)</option>
-                <option value="24">Laser-Tok (24)</option>
-              </select>
-            </div>
-          </div>
-
+          <p class="card-sub">Extrem aggressiver High-Pitch Tok mit Square-Clipper für Uptempo &amp; Terror.</p>
           <div class="sliders">
             <div class="slider-item">
-              <label>Start-Frequenz (Tok) <span class="val-pill"><span id="val-up-start">950</span> Hz</span></label>
-              <input type="range" id="up_start_hz" min="150" max="1800" value="950"
+              <label>Piep-Punch <span class="val-pill"><span id="val-up-start">520</span> Hz</span></label>
+              <input type="range" id="up_start" min="250" max="900" value="520"
                 oninput="document.getElementById('val-up-start').innerText = this.value">
             </div>
             <div class="slider-item">
-              <label>End-Frequenz (Subbass) <span class="val-pill"><span id="val-up-end">45</span> Hz</span></label>
-              <input type="range" id="up_end_hz" min="30" max="90" value="45"
+              <label>Bass-Bauch <span class="val-pill"><span id="val-up-end">62</span> Hz</span></label>
+              <input type="range" id="up_end" min="45" max="110" value="62"
                 oninput="document.getElementById('val-up-end').innerText = this.value">
             </div>
             <div class="slider-item">
-              <label>Charakter / Piezo-Anteil <span class="val-pill" id="val-up-piezo">0.4</span></label>
-              <input type="range" id="up_piezo" min="0" max="1" step="0.05" value="0.4"
-                oninput="document.getElementById('val-up-piezo').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Drive (Verzerrung) <span class="val-pill" id="val-up-drive">20</span></label>
-              <input type="range" id="up_drive" min="1" max="45" step="0.5" value="20"
+              <label>Zaag-Drive <span class="val-pill" id="val-up-drive">16</span></label>
+              <input type="range" id="up_drive" min="5" max="30" step="1" value="16"
                 oninput="document.getElementById('val-up-drive').innerText = this.value">
             </div>
             <div class="slider-item">
-              <label>Länge <span class="val-pill"><span id="val-up-dauer">0.26</span> s</span></label>
-              <input type="range" id="up_dauer" min="0.12" max="0.8" step="0.02" value="0.26"
+              <label>Länge <span class="val-pill"><span id="val-up-dauer">0.35</span> s</span></label>
+              <input type="range" id="up_dauer" min="0.15" max="0.6" step="0.05" value="0.35"
                 oninput="document.getElementById('val-up-dauer').innerText = this.value">
             </div>
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-ghost" onclick="zufallsUptempoKick()" title="Zufälliger Uptempo Kick">🎲</button>
-          <button class="btn btn-cyan" onclick="uptempoKickBauen(false)">▶ Anhören</button>
-          <button class="btn btn-orange" onclick="uptempoKickBauen(true)">⬇ .WAV</button>
+          <button type="button" class="btn btn-orange" onclick="playUptempoKick()">Anhören</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadUptempoKick()">.WAV Export</button>
         </div>
       </div>
 
-      <!-- 3. RAVE MELODIEN -->
+      <!-- 3. SNARE & HAT ROLLS -->
+      <div class="synth-card">
+        <div>
+          <div class="card-top">
+            <h3>Snares &amp; Hi-Hat Rolls</h3>
+            <span class="chip">DRUMS</span>
+          </div>
+          <p class="card-sub">Knackige Tekk-Claps &amp; Snares sowie treibende 16tel-Hi-Hat Rolls.</p>
+          <div class="sliders">
+            <div class="slider-item">
+              <label>Snare-Snap <span class="val-pill"><span id="val-snare-tone">210</span> Hz</span></label>
+              <input type="range" id="snare_tone" min="130" max="380" value="210"
+                oninput="document.getElementById('val-snare-tone').innerText = this.value">
+            </div>
+            <div class="slider-item">
+              <label>Snare-Noise <span class="val-pill"><span id="val-snare-len">0.24</span> s</span></label>
+              <input type="range" id="snare_len" min="0.1" max="0.5" step="0.02" value="0.24"
+                oninput="document.getElementById('val-snare-len').innerText = this.value">
+            </div>
+            <div class="slider-item">
+              <label>Roll-Schläge <span class="val-pill"><span id="val-hat-hits">8</span>x</span></label>
+              <input type="range" id="hat_hits" min="4" max="16" step="2" value="8"
+                oninput="document.getElementById('val-hat-hits').innerText = this.value">
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-cyan" onclick="playSnare()">Snare</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadSnare()">Snare .WAV</button>
+          <button type="button" class="btn btn-cyan" onclick="playHatRoll()">Hat-Roll</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadHatRoll()">Roll .WAV</button>
+        </div>
+      </div>
+
+      <!-- 4. ERWEITERTER RAVE MELODIEN GENERATOR -->
       <div class="synth-card purple-theme">
         <div>
           <div class="card-top">
-            <h3>Rave Melodien</h3>
-            <span class="chip purple">MULTI-SYNTH</span>
+            <h3>Rave Melodien &amp; Hook Lab</h3>
+            <span class="chip purple">7 PATTERNS</span>
           </div>
-          <p class="card-sub">Kombiniere Wellenform, Tonleiter und Offbeat-Rhythmus für eigene Riffs.</p>
+          <p class="card-sub">Mehr Abwechslung: Wähle Pattern, Tonart, Lead-Synth oder würfle eine neue Hook.</p>
 
           <div class="select-row">
             <div class="select-group">
-              <span>SYNTH SOUND</span>
-              <select id="mel_wave">
-                <option value="supersaw">SuperSaw Lead</option>
-                <option value="square">Acid Square</option>
-                <option value="screech">Hardcore Screech</option>
+              <span>MELODIE-PATTERN</span>
+              <select id="melody_pattern" onchange="buildMelodyNotes()">
+                <option value="offbeat">1. Classic Rave Off-Beat</option>
+                <option value="staircase">2. Hardtekk Staircase</option>
+                <option value="frenzy">3. Uptempo Frenzy</option>
+                <option value="acid">4. Hypnotic Acid Roll</option>
+                <option value="anthem">5. Dark Trance Anthem</option>
+                <option value="octave">6. Octave Bounce Hook</option>
+                <option value="random">7. Random Rave Hook 🎲</option>
               </select>
             </div>
             <div class="select-group">
-              <span>RHYTHMUS</span>
-              <select id="mel_rhythm">
-                <option value="straight">8tel Durchgehend</option>
-                <option value="offbeat">Offbeat Stabs</option>
-                <option value="gallop">Tekk Galopp</option>
+              <span>TONART (SCALE)</span>
+              <select id="melody_scale" onchange="buildMelodyNotes()">
+                <option value="phrygian">E Phrygian (Hardtekk)</option>
+                <option value="aminor">A-Moll (Rave Classic)</option>
+                <option value="fminor">F-Moll (Dark Uptempo)</option>
+                <option value="dminor">D-Moll (Hardstyle)</option>
+                <option value="harmonic">G Harmonic Minor (Ostblock)</option>
+                <option value="cminor">C-Moll (Industrial)</option>
+                <option value="major">C-Dur (Euphoric Happy)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="select-row">
+            <div class="select-group">
+              <span>SYNTH-CHARAKTER</span>
+              <select id="melody_synth">
+                <option value="supersaw">SuperSaw Rave Lead</option>
+                <option value="acid303">Acid 303 Squelch</option>
+                <option value="screech">Screech FM Lead</option>
+                <option value="pluck">Pluck Trance Bell</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <span>NOTEN-LÄNGE</span>
+              <select id="melody_gate">
+                <option value="0.55">Stakkato (Kurz &amp; hart)</option>
+                <option value="0.82" selected>Normal (Rave Gate)</option>
+                <option value="1.15">Legato (Lang &amp; breit)</option>
               </select>
             </div>
           </div>
 
           <div class="sliders">
             <div class="slider-item">
-              <label>Tonleiter <span class="val-pill" id="val-mel-scale">F-Moll Phrygisch</span></label>
-              <select id="mel_scale" onchange="updateScaleLabel()" style="width: 100%;">
-                <option value="f_phrygian">F-Moll Phrygisch (Düster)</option>
-                <option value="f_minor">F-Moll Natural (Euphorisch)</option>
-                <option value="g_dark">G-Moll Dark (Treibend)</option>
-              </select>
+              <label>Filter-Cutoff (Helligkeit) <span class="val-pill"><span id="val-mel-cutoff">3200</span> Hz</span></label>
+              <input type="range" id="mel_cutoff" min="600" max="8000" step="100" value="3200"
+                oninput="document.getElementById('val-mel-cutoff').innerText = this.value">
             </div>
             <div class="slider-item">
-              <label>Tempo <span class="val-pill"><span id="val-mel-bpm">180</span> BPM</span></label>
-              <input type="range" id="mel_bpm" min="150" max="225" value="180"
-                oninput="document.getElementById('val-mel-bpm').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Tonhöhe (Pitch) <span class="val-pill"><span id="val-mel-oktave">0</span> HT</span></label>
-              <input type="range" id="mel_oktave" min="-12" max="12" step="1" value="0"
-                oninput="document.getElementById('val-mel-oktave').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Detune / Breite <span class="val-pill" id="val-mel-detune">0.009</span></label>
-              <input type="range" id="mel_detune" min="0" max="0.03" step="0.001" value="0.009"
+              <label>Detune / Aggression <span class="val-pill"><span id="val-mel-detune">18</span> ct</span></label>
+              <input type="range" id="mel_detune" min="2" max="45" step="1" value="18"
                 oninput="document.getElementById('val-mel-detune').innerText = this.value">
             </div>
-            <div class="slider-item">
-              <label>Drive (Verzerrung) <span class="val-pill" id="val-mel-drive">3.0</span></label>
-              <input type="range" id="mel_drive" min="1" max="12" step="0.5" value="3.0"
-                oninput="document.getElementById('val-mel-drive').innerText = this.value">
-            </div>
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-purple" onclick="neueMelodieWuerfeln()">🎲 Neue Melodie würfeln</button>
-          <button class="btn btn-cyan" onclick="melodieBauen(false)">▶ Anhören</button>
-          <button class="btn btn-orange" onclick="melodieBauen(true)">⬇ .WAV</button>
-        </div>
-      </div>
-
-      <!-- 4. SNARE -->
-      <div class="synth-card">
-        <div>
-          <div class="card-top">
-            <h3>Hardtekk Snare</h3>
-            <span class="chip">PERCUSSION</span>
-          </div>
-          <p class="card-sub">Stelle Kessel-Tonhöhe, Snap-Attack und Rausch-Teppich frei ein.</p>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>Kessel-Tonhöhe <span class="val-pill"><span id="val-snare-hz">155</span> Hz</span></label>
-              <input type="range" id="snare_hz" min="90" max="300" value="155"
-                oninput="document.getElementById('val-snare-hz').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Punch-Snap (Attack) <span class="val-pill" id="val-snare-snap">2.0</span></label>
-              <input type="range" id="snare_snap" min="0.5" max="4.0" step="0.5" value="2.0"
-                oninput="document.getElementById('val-snare-snap').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Teppich-Anteil (Noise) <span class="val-pill" id="val-snare-noise">0.75</span></label>
-              <input type="range" id="snare_noise" min="0.1" max="1.2" step="0.05" value="0.75"
-                oninput="document.getElementById('val-snare-noise').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Drive <span class="val-pill" id="val-snare-drive">4.0</span></label>
-              <input type="range" id="snare_drive" min="1" max="14" step="0.5" value="4.0"
-                oninput="document.getElementById('val-snare-drive').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Länge <span class="val-pill"><span id="val-snare-dauer">0.24</span> s</span></label>
-              <input type="range" id="snare_dauer" min="0.08" max="0.6" step="0.02" value="0.24"
-                oninput="document.getElementById('val-snare-dauer').innerText = this.value">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-cyan" onclick="snareBauen(false)">▶ Anhören</button>
-          <button class="btn btn-orange" onclick="snareBauen(true)">⬇ .WAV</button>
-        </div>
-      </div>
-
-      <!-- 5. HI-HAT & ROLLS -->
-      <div class="synth-card">
-        <div>
-          <div class="card-top">
-            <h3>Hi-Hat &amp; Roll Generator</h3>
-            <span class="chip">GROOVE</span>
-          </div>
-          <p class="card-sub">Einzelne Closed/Open Hats oder fertige schnelle 16tel-Shaker-Salven.</p>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>Schläge pro Sample <span class="val-pill" id="val-hat-hits">1x Single</span></label>
-              <select id="hat_hits" onchange="updateHatLabel()" style="width: 100%;">
-                <option value="1">1x Single Hat (Closed / Open)</option>
-                <option value="2">2x Double-Hat Roll</option>
-                <option value="4">4x 16tel Shaker-Salve (180 BPM)</option>
-              </select>
-            </div>
-            <div class="slider-item">
-              <label>Länge (Closed–Open) <span class="val-pill"><span id="val-hat-dauer">0.08</span> s</span></label>
-              <input type="range" id="hat_dauer" min="0.04" max="0.4" step="0.02" value="0.08"
-                oninput="document.getElementById('val-hat-dauer').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Metall-Anteil <span class="val-pill" id="val-hat-metall">0.4</span></label>
-              <input type="range" id="hat_metall" min="0" max="1.0" step="0.05" value="0.4"
-                oninput="document.getElementById('val-hat-metall').innerText = this.value">
-            </div>
-            <div class="slider-item">
-              <label>Drive <span class="val-pill" id="val-hat-drive">3.0</span></label>
-              <input type="range" id="hat_drive" min="1" max="12" step="0.5" value="3.0"
-                oninput="document.getElementById('val-hat-drive').innerText = this.value">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-cyan" onclick="hihatBauen(false)">▶ Anhören</button>
-          <button class="btn btn-orange" onclick="hihatBauen(true)">⬇ .WAV</button>
+          <button type="button" class="btn btn-purple" onclick="playMelody()">Melodie anhören</button>
+          <button type="button" class="btn btn-ghost" onclick="randomizeMelody()">🎲 Neue Hook</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadMelody()">.WAV Export</button>
         </div>
       </div>
     </div>
 
-    <!-- 02: 16-STEP PATTERN PLAYER -->
+    <!-- 02: LIVE STEP SEQUENZER -->
     <div class="section-head">
-      <h2 class="section-title"><span class="section-num">02</span> 16-Step Beat-Sequenzer (Mono / Poly Engine)</h2>
+      <h2 class="section-title"><span class="section-num">02</span> 16-Step Live Groovebox</h2>
     </div>
 
     <div class="panel-box">
       <div class="seq-header">
         <div>
-          <h3>Live Pattern-Player</h3>
-          <p style="color: var(--text-dim); font-size: 0.86rem;">
-            <strong>MONO</strong> schneidet den vorherigen Schlag sauber ab. <strong>POLY</strong> lässt Sounds ausklingen.
-          </p>
+          <h3 style="font-size: 1.1rem;">Pattern Sequenzer &amp; Voice Mode</h3>
+          <p style="font-size: 0.84rem; color: var(--text-dim);">Klicke auf <strong>MONO / POLY</strong> pro Spur, um Überlappungen zu steuern.</p>
         </div>
-
         <div class="seq-tools">
-          <label style="font-size: 0.86rem; display: flex; align-items: center; gap: 8px;">
-            BPM: <span class="val-pill" id="val-seq-bpm">180</span>
-            <input type="range" id="seq_bpm" min="140" max="230" value="180" style="width: 120px;"
-              oninput="updateMasterTempo(this.value)">
-          </label>
-          <button id="seq-play-btn" class="btn btn-cyan" onclick="toggleSequencer()">▶ Start</button>
-          <button class="btn btn-ghost" onclick="ladeBeatPreset('hardtekk')">Hardtekk Beat</button>
-          <button class="btn btn-ghost" onclick="ladeBeatPreset('schranz')">Schranz / Techno</button>
-          <button class="btn btn-ghost" onclick="ladeBeatPreset('uptempo')">Uptempo Beat</button>
-          <button class="btn btn-ghost" onclick="seqClear()">Reset</button>
+          <button id="btn-seq-play" class="btn btn-orange" style="min-width: 110px;" onclick="toggleSequencer()">▶ START</button>
+          <button class="btn btn-ghost" onclick="loadPresetPattern('hardtekk')">Preset: Hardtekk</button>
+          <button class="btn btn-ghost" onclick="loadPresetPattern('uptempo')">Preset: Uptempo</button>
+          <button class="btn btn-ghost" onclick="clearSequencer()">Leeren</button>
         </div>
       </div>
 
-      <div id="sequencer-grid"></div>
+      <div style="margin-bottom: 18px; max-width: 360px;">
+        <div class="slider-item">
+          <label>Master Tempo <span class="val-pill"><span id="val-bpm">180</span> BPM</span></label>
+          <input type="range" id="bpm" min="150" max="240" value="180" oninput="updateBpm(this.value)">
+        </div>
+      </div>
+
+      <div id="sequencer-rows"></div>
     </div>
 
-    <!-- 03: SAMPLE LIBRARY -->
+    <!-- 03: SAMPLE LIBRARY & WORKFLOW -->
     <div class="section-head">
-      <h2 class="section-title"><span class="section-num">03</span> Sample Library &amp; Upload</h2>
+      <h2 class="section-title"><span class="section-num">03</span> Sample-Library &amp; Hardware Workflow</h2>
     </div>
 
     <div class="panel-box">
       <div class="library-header">
         <div>
-          <h3>Eigene Audio-Files &amp; Presets vorhören</h3>
-          <p style="color: var(--text-dim); font-size: 0.86rem;">
-            Ziehe eigene .WAV / .MP3-Dateien zum Testen rein oder lade heruntergeladene Studio-Samples wieder hoch.
-          </p>
+          <h3 style="font-size: 1.1rem;">Eigene Audio-Clips &amp; Kicks vorhören</h3>
+          <p style="font-size: 0.84rem; color: var(--text-dim);">Lade eigene .WAV oder .MP3 Dateien direkt im Browser zum Gegenhören.</p>
         </div>
-
         <label class="upload-btn">
-          ⬆ Eigenes Sample hochladen
-          <input type="file" accept="audio/*" multiple style="display: none;"
-            onchange="eigeneSamplesHochladen(this.files)">
+          + Eigene WAV/MP3 laden
+          <input type="file" id="audio-uploader" accept="audio/wav,audio/mpeg,audio/ogg,audio/flac" multiple style="display:none" onchange="handleAudioUpload(event)">
         </label>
       </div>
-
-      <div id="sample-bank-grid" class="sample-grid"></div>
+      <div id="sample-library-list" class="sample-grid"></div>
     </div>
 
-    <!-- 04: HARDWARE WORKFLOW -->
     <div class="section-head">
-      <h2 class="section-title"><span class="section-num">04</span> Hardware-Workflow</h2>
+      <h2 class="section-title"><span class="section-num">04</span> Electribe 2 &amp; DAW Export</h2>
     </div>
 
     <div class="workflow-grid">
       <div class="wf-step">
-        <div style="font-family: monospace; color: var(--cyan); font-weight: 700; margin-bottom: 4px;">SCHRITT 01</div>
-        <h4 style="margin-bottom: 4px;">Kick oder Riff schrauben</h4>
-        <p style="font-size: 0.85rem; color: var(--text-dim);">
-          Wähle aus 6 Kick-Stilen oder Uptempo-Piezo/Zaag und teste den Sound direkt im 16-Step-Sequenzer.
-        </p>
+        <div style="font-weight: 700; margin-bottom: 4px;">1. Kick-Stil &amp; Hook wählen</div>
+        <p style="font-size: 0.84rem; color: var(--text-dim);">Stelle deinen Kick-Typ sowie Melodie-Pattern und Tonart im Studio ein.</p>
       </div>
-      <div class="wf-step">
-        <div style="font-family: monospace; color: var(--orange); font-weight: 700; margin-bottom: 4px;">SCHRITT 02</div>
-        <h4 style="margin-bottom: 4px;">Als 16-Bit .WAV exportieren</h4>
-        <p style="font-size: 0.85rem; color: var(--text-dim);">
-          Alle Samples werden unkomprimiert in 44.1 kHz / 16-Bit Mono gerendert – sofort bereit für SD-Karte &amp; DAW.
-        </p>
+      <div class="wf-step" style="border-left-color: var(--orange);">
+        <div style="font-weight: 700; margin-bottom: 4px;">2. 16-Bit WAV exportieren</div>
+        <p style="font-size: 0.84rem; color: var(--text-dim);">Speichere deinen Sound mit einem Klick als kompatible .WAV-Datei.</p>
       </div>
-      <div class="wf-step">
-        <div style="font-family: monospace; color: var(--purple); font-weight: 700; margin-bottom: 4px;">SCHRITT 03</div>
-        <h4 style="margin-bottom: 4px;">Auf Hardware veredeln</h4>
-        <p style="font-size: 0.85rem; color: var(--text-dim);">
-          Lade deine Samples in deinen Hardware-Sampler und bearbeite sie live mit Filtern, MFX und Overdrive.
-        </p>
+      <div class="wf-step" style="border-left-color: var(--purple);">
+        <div style="font-weight: 700; margin-bottom: 4px;">3. SD-Karte / FL Studio</div>
+        <p style="font-size: 0.84rem; color: var(--text-dim);">Kopiere die WAV-Datei in deinen Sample-Ordner und triggere sie direkt auf den Pads.</p>
       </div>
     </div>
 
     <footer>
-      SVENTEKK Audio Lab &bull; Built by Sven (@sventekk07)
+      SVENTEKK Audio Lab &middot; Cloud-Sync Web Audio Synthesizer
     </footer>
   </div>
 
   <script>
-    // =========================================================================
-    // 0. SICHERHEIT: SHA-256 HASHING, XSS-SANITIZER & DEVICE-RATE-LIMIT
-    // =========================================================================
-    const MAX_FREE_CREDITS = 5;
-    const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
-    // SHA-256 Hash von "SVENTEKKVIP" – steht nicht mehr im Klartext im Quellcode!
-    const VIP_CODE_HASH = "8f8c4e0e965b7d2658d354558250932917226d4f4950504731317e31995638f7";
-    let authMode = "login";
+    /* =========================================================================
+       1. SUPABASE CLOUD-DATENBANK + PERSISTENTER LOGIN
+       ========================================================================= */
+    const SUPABASE_URL = 'https://zrdturntjcdvazyrrskk.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_5ai7Pl79GFVj1EUCTfacOw_0OxsrgaK';
 
-    // XSS-Schutz: Macht gefährliche Zeichen in Benutzernamen & Dateinamen unschädlich
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
+    const STORAGE_SESSION_KEY = 'sventekk_cloud_session_v1';
+    const STORAGE_QUOTA_KEY = 'sventekk_device_quota_v2';
+    const FREE_CREDITS_MAX = 5;
+    const RESET_WINDOW_MS = 24 * 60 * 60 * 1000;
+    const VIP_CODE_HASH = 'eb7189dc6b3d6d53fb826658aa968c083287f61baee3d69386bf5ab883230e8a';
 
-    // Kryptografischer SHA-256 Hash (für Passwörter & VIP-Code)
-    async function sha256(text) {
+    let authMode = 'login';
+    let currentUser = null;
+
+    async function sha256Hex(text) {
       const encoder = new TextEncoder();
-      const data = encoder.encode("sventekk_salt_2026_" + text);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
     }
 
-    // VIP-Code Prüfung über Hash-Vergleich
-    async function checkVipCode(inputCode) {
-      const clean = inputCode.trim().toUpperCase();
-      if (!clean) return false;
-      // Abgleich gegen Hash (inkl. Fallback für genau SVENTEKKVIP)
-      const h = await sha256(clean);
-      return clean === atob("U1ZFTlRFS0tWSVA=") || h === VIP_CODE_HASH;
+    function setPersistentSession(username) {
+      localStorage.setItem(STORAGE_SESSION_KEY, username);
+      const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+      document.cookie = `${STORAGE_SESSION_KEY}=${encodeURIComponent(username)}; expires=${expires}; path=/; SameSite=Lax`;
     }
 
-    function getUsersDB() {
-      try {
-        return JSON.parse(localStorage.getItem("sventekk_users_v2") || "{}");
-      } catch {
-        return {};
-      }
+    function getPersistentSession() {
+      const ls = localStorage.getItem(STORAGE_SESSION_KEY);
+      if (ls) return ls;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + STORAGE_SESSION_KEY + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
     }
 
-    function saveUsersDB(db) {
-      localStorage.setItem("sventekk_users_v2", JSON.stringify(db));
+    function clearPersistentSession() {
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      document.cookie = `${STORAGE_SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
     }
 
-    // Geräte-weiter Zähler verhindert Umgehen durch schnelle Fake-Accounts
     function getDeviceQuota() {
+      const now = Date.now();
+      let q = null;
       try {
-        const q = JSON.parse(localStorage.getItem("sventekk_device_quota") || '{"used":0,"resetAt":null}');
-        if (q.resetAt && Date.now() >= q.resetAt) {
-          return { used: 0, resetAt: null };
-        }
-        return q;
-      } catch {
-        return { used: 0, resetAt: null };
+        q = JSON.parse(localStorage.getItem(STORAGE_QUOTA_KEY));
+      } catch (e) {}
+      if (!q || typeof q.used !== 'number' || typeof q.windowStart !== 'number') {
+        q = { used: 0, windowStart: now };
       }
+      if (now - q.windowStart >= RESET_WINDOW_MS) {
+        q = { used: 0, windowStart: now };
+      }
+      localStorage.setItem(STORAGE_QUOTA_KEY, JSON.stringify(q));
+      return q;
     }
 
     function saveDeviceQuota(q) {
-      localStorage.setItem("sventekk_device_quota", JSON.stringify(q));
+      localStorage.setItem(STORAGE_QUOTA_KEY, JSON.stringify(q));
     }
 
-    function getCurrentUsername() {
-      return localStorage.getItem("sventekk_current_user_v2");
+    /* Supabase REST Helper */
+    async function sbFetchUser(username) {
+      const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}&select=*`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      if (!res.ok) throw new Error('Datenbank-Verbindung fehlgeschlagen');
+      const rows = await res.json();
+      return rows[0] || null;
     }
 
-    function checkAndReset24h(user) {
-      if (!user || user.isVip) return false;
+    async function sbCreateUser(userObj) {
+      const url = `${SUPABASE_URL}/rest/v1/studio_users`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(userObj)
+      });
+      if (!res.ok) throw new Error('Registrierung in Cloud fehlgeschlagen');
+      const rows = await res.json();
+      return rows[0] || userObj;
+    }
+
+    async function sbUpdateUser(username, patch) {
+      const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}`;
+      await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(patch)
+      });
+    }
+
+    async function syncUserReset(user) {
+      if (!user) return null;
       const now = Date.now();
-      if (user.resetAt && now >= user.resetAt) {
-        user.credits = MAX_FREE_CREDITS;
-        user.resetAt = null;
-        return true;
+      let changed = false;
+
+      if (!user.window_start || now - Number(user.window_start) >= RESET_WINDOW_MS) {
+        user.credits_used = 0;
+        user.window_start = now;
+        changed = true;
       }
-      return false;
+
+      const dq = getDeviceQuota();
+      if (!user.is_vip && dq.used > user.credits_used) {
+        user.credits_used = Math.min(FREE_CREDITS_MAX, dq.used);
+        user.window_start = dq.windowStart;
+        changed = true;
+      }
+
+      if (changed) {
+        sbUpdateUser(user.username, {
+          credits_used: user.credits_used,
+          window_start: user.window_start
+        }).catch(() => {});
+      }
+      return user;
     }
 
-    function openAuthModal(mode = "login") {
+    async function loadSession() {
+      const savedName = getPersistentSession();
+      if (!savedName) {
+        currentUser = null;
+        updateAccountUI();
+        return;
+      }
+      try {
+        const dbUser = await sbFetchUser(savedName);
+        if (dbUser) {
+          currentUser = await syncUserReset(dbUser);
+          setPersistentSession(savedName);
+        } else {
+          clearPersistentSession();
+          currentUser = null;
+        }
+      } catch (e) {
+        currentUser = null;
+      }
+      updateAccountUI();
+    }
+
+    function formatTimeLeft(ms) {
+      if (ms <= 0) return '00:00:00';
+      const totalSec = Math.floor(ms / 1000);
+      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const s = String(totalSec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function updateAccountUI() {
+      const avatarEl = document.getElementById('ui-avatar');
+      const nameEl = document.getElementById('ui-username');
+      const timerEl = document.getElementById('ui-reset-timer');
+      const badgeEl = document.getElementById('ui-credits-badge');
+      const loginBtn = document.getElementById('btn-open-login');
+      const logoutBtn = document.getElementById('btn-logout');
+
+      if (!currentUser) {
+        avatarEl.innerText = '?';
+        nameEl.innerText = 'Nicht angemeldet (Gast)';
+        timerEl.innerText = 'Jetzt kostenlos anmelden für 5 Gratis-Sounds / 24h';
+        badgeEl.innerText = 'LOGIN NÖTIG';
+        badgeEl.className = 'credit-badge empty';
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        return;
+      }
+
+      avatarEl.innerText = currentUser.username.charAt(0).toUpperCase();
+      nameEl.innerText = currentUser.username + (currentUser.is_vip ? ' ★ VIP' : '');
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+
+      if (currentUser.is_vip) {
+        badgeEl.innerText = '∞ UNLIMITED VIP';
+        badgeEl.className = 'credit-badge vip';
+        timerEl.innerText = 'Unbegrenzte Studio-Generierungen aktiviert';
+        return;
+      }
+
+      const used = Number(currentUser.credits_used || 0);
+      const winStart = Number(currentUser.window_start || Date.now());
+      const remaining = Math.max(0, FREE_CREDITS_MAX - used);
+      const msLeft = (winStart + RESET_WINDOW_MS) - Date.now();
+      const timeStr = formatTimeLeft(msLeft);
+
+      badgeEl.innerText = `${remaining} / ${FREE_CREDITS_MAX} FREE`;
+      badgeEl.className = remaining === 0 ? 'credit-badge empty' : 'credit-badge';
+      timerEl.innerText = remaining < FREE_CREDITS_MAX
+        ? `Reset der 5 Gratis-Credits in: ${timeStr}`
+        : 'Volles 24h-Guthaben verfügbar (5 Sounds)';
+
+      const modalCd = document.getElementById('modal-countdown');
+      if (modalCd) modalCd.innerText = timeStr;
+    }
+
+    setInterval(updateAccountUI, 1000);
+
+    function openAuthModal(mode = 'login') {
       switchAuthTab(mode);
-      document.getElementById("auth-error").innerText = "";
-      document.getElementById("auth-modal").classList.add("open");
+      document.getElementById('auth-error').innerText = '';
+      document.getElementById('auth-modal').classList.add('open');
     }
 
     function closeAuthModal() {
-      document.getElementById("auth-modal").classList.remove("open");
+      document.getElementById('auth-modal').classList.remove('open');
     }
 
     function closeLimitModal() {
-      document.getElementById("limit-modal").classList.remove("open");
+      document.getElementById('limit-modal').classList.remove('open');
     }
 
     function switchAuthTab(mode) {
       authMode = mode;
-      document.getElementById("tab-login").classList.toggle("active", mode === "login");
-      document.getElementById("tab-register").classList.toggle("active", mode === "register");
-      document.getElementById("auth-modal-title").innerText =
-        mode === "login" ? "Anmelden & Sounds bauen" : "Kostenlosen Account erstellen";
-      document.getElementById("vip-field").style.display = mode === "register" ? "flex" : "none";
-      document.getElementById("auth-error").innerText = "";
+      document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+      document.getElementById('auth-modal-title').innerText =
+        mode === 'login' ? 'Anmelden & Sounds bauen' : 'Neuen SVENTEKK Account erstellen';
+      document.getElementById('vip-field').style.display = mode === 'register' ? 'flex' : 'none';
+      document.getElementById('auth-error').innerText = '';
     }
 
     async function submitAuth() {
-      const rawUser = document.getElementById("auth-username").value.trim().toLowerCase();
-      const username = rawUser.replace(/[^a-z0-9._-]/g, "");
-      const password = document.getElementById("auth-password").value;
-      const vipCode = document.getElementById("auth-vipcode").value;
-      const errBox = document.getElementById("auth-error");
+      const rawUser = document.getElementById('auth-username').value.trim();
+      const pass = document.getElementById('auth-password').value;
+      const vipInput = document.getElementById('auth-vipcode').value.trim();
+      const errEl = document.getElementById('auth-error');
+      const submitBtn = document.getElementById('btn-auth-submit');
 
-      if (username.length < 3 || password.length < 4) {
-        errBox.innerText = "Benutzername (min. 3 Zeichen, a-z/0-9) & Passwort (min. 4 Zeichen) erforderlich.";
+      if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(rawUser)) {
+        errEl.innerText = 'Benutzername: 3–24 Zeichen (nur Buchstaben, Zahlen, _ . -).';
+        return;
+      }
+      if (pass.length < 4) {
+        errEl.innerText = 'Passwort muss mindestens 4 Zeichen lang sein.';
         return;
       }
 
-      const db = getUsersDB();
-      const passHash = await sha256(password);
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Verbinde...';
+      errEl.innerText = '';
 
-      if (authMode === "register") {
-        if (db[username]) {
-          errBox.innerText = "Dieser Benutzername ist bereits vergeben!";
-          return;
-        }
-        const isVipUser = await checkVipCode(vipCode);
-        const deviceQ = getDeviceQuota();
-        const startCredits = isVipUser ? MAX_FREE_CREDITS : Math.max(0, MAX_FREE_CREDITS - deviceQ.used);
+      try {
+        const username = rawUser.toLowerCase();
+        const passHash = await sha256Hex(username + '::' + pass);
+        const existingUser = await sbFetchUser(username);
 
-        db[username] = {
-          passHash: passHash,
-          credits: startCredits,
-          resetAt: deviceQ.resetAt,
-          isVip: isVipUser
-        };
-        saveUsersDB(db);
-        localStorage.setItem("sventekk_current_user_v2", username);
-        document.getElementById("auth-password").value = "";
-        closeAuthModal();
-        updateAccountUI();
-        setStatus("WILLKOMMEN, " + username.toUpperCase() + "!");
-      } else {
-        const user = db[username];
-        if (!user || user.passHash !== passHash) {
-          errBox.innerText = "Benutzername oder Passwort falsch.";
-          return;
+        if (authMode === 'register') {
+          if (existingUser) {
+            errEl.innerText = 'Dieser Benutzername existiert bereits. Bitte anmelden.';
+            return;
+          }
+          const vipHash = vipInput ? await sha256Hex(vipInput) : '';
+          const isVip = vipHash === VIP_CODE_HASH;
+          const dq = getDeviceQuota();
+
+          const newUser = {
+            username,
+            pass_hash: passHash,
+            is_vip: isVip,
+            credits_used: isVip ? 0 : dq.used,
+            window_start: dq.windowStart,
+            last_login: new Date().toISOString()
+          };
+
+          const created = await sbCreateUser(newUser);
+          setPersistentSession(username);
+          currentUser = created;
+          closeAuthModal();
+          updateAccountUI();
+          setStatus(`WILLKOMMEN ${username.toUpperCase()}!`);
+        } else {
+          if (!existingUser) {
+            errEl.innerText = 'Account nicht gefunden. Bitte zuerst registrieren.';
+            return;
+          }
+          if (existingUser.pass_hash !== passHash) {
+            errEl.innerText = 'Falsches Passwort.';
+            return;
+          }
+          await sbUpdateUser(username, { last_login: new Date().toISOString() });
+          setPersistentSession(username);
+          currentUser = await syncUserReset(existingUser);
+          closeAuthModal();
+          updateAccountUI();
+          setStatus(`EINGELOGGT ALS ${username.toUpperCase()}`);
         }
-        checkAndReset24h(user);
-        saveUsersDB(db);
-        localStorage.setItem("sventekk_current_user_v2", username);
-        document.getElementById("auth-password").value = "";
-        closeAuthModal();
-        updateAccountUI();
-        setStatus("ANGEMELDET ALS " + username.toUpperCase());
+      } catch (e) {
+        errEl.innerText = 'Verbindungsfehler zur Cloud-Datenbank. Bitte kurz warten & erneut versuchen.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Weiter ins Studio';
       }
     }
 
     function logoutUser() {
-      localStorage.removeItem("sventekk_current_user_v2");
+      clearPersistentSession();
+      currentUser = null;
       updateAccountUI();
-      setStatus("ABGEMELDET");
+      setStatus('ABGEMELDET');
     }
 
     async function unlockVipPrompt() {
-      const code = prompt("Gib deinen VIP / Creator-Code ein:");
+      if (!currentUser) {
+        closeLimitModal();
+        openAuthModal('login');
+        return;
+      }
+      const code = prompt('Gib deinen SVENTEKK Creator / VIP-Code ein:');
       if (!code) return;
-      if (await checkVipCode(code)) {
-        const username = getCurrentUsername();
-        const db = getUsersDB();
-        if (username && db[username]) {
-          db[username].isVip = true;
-          saveUsersDB(db);
-          closeLimitModal();
-          updateAccountUI();
-          setStatus("VIP UNLIMITED FREIGESCHALTET!");
-        }
+      const hash = await sha256Hex(code.trim());
+      if (hash === VIP_CODE_HASH) {
+        currentUser.is_vip = true;
+        await sbUpdateUser(currentUser.username, { is_vip: true });
+        closeLimitModal();
+        updateAccountUI();
+        setStatus('VIP UNLIMITED AKTIVIERT!');
       } else {
-        alert("Ungültiger Code.");
+        alert('Ungültiger VIP-Code.');
       }
     }
 
-    function verbraucheFreeCredit() {
-      const username = getCurrentUsername();
-      if (!username) {
-        openAuthModal("login");
-        document.getElementById("auth-error").innerText = "Bitte melde dich an, um Samples zu erstellen (5 Gratis / 24h).";
+    function consumeGenerationCredit() {
+      if (!currentUser) {
+        openAuthModal('register');
+        setStatus('BITTE ZUERST ANMELDEN');
         return false;
       }
 
-      const db = getUsersDB();
-      const user = db[username];
-      if (!user) {
-        logoutUser();
-        openAuthModal("login");
+      if (currentUser.is_vip) return true;
+
+      const now = Date.now();
+      if (!currentUser.window_start || now - Number(currentUser.window_start) >= RESET_WINDOW_MS) {
+        currentUser.credits_used = 0;
+        currentUser.window_start = now;
+      }
+
+      if (Number(currentUser.credits_used) >= FREE_CREDITS_MAX) {
+        updateAccountUI();
+        document.getElementById('limit-modal').classList.add('open');
+        setStatus('24H LIMIT ERREICHT (0/5)');
         return false;
       }
 
-      checkAndReset24h(user);
+      currentUser.credits_used = Number(currentUser.credits_used) + 1;
 
-      if (user.isVip) {
-        return true;
-      }
+      const dq = getDeviceQuota();
+      dq.used = Math.max(dq.used + 1, currentUser.credits_used);
+      saveDeviceQuota(dq);
 
-      const deviceQ = getDeviceQuota();
-      const effektivVerfuegbar = Math.min(user.credits, MAX_FREE_CREDITS - deviceQ.used);
-
-      if (effektivVerfuegbar <= 0) {
-        const activeReset = user.resetAt || deviceQ.resetAt || (Date.now() + RESET_INTERVAL_MS);
-        updateCountdownDisplays(activeReset);
-        document.getElementById("limit-modal").classList.add("open");
-        return false;
-      }
-
-      const resetTimestamp = user.resetAt || deviceQ.resetAt || (Date.now() + RESET_INTERVAL_MS);
-      user.credits = effektivVerfuegbar - 1;
-      user.resetAt = resetTimestamp;
-      db[username] = user;
-      saveUsersDB(db);
-
-      saveDeviceQuota({
-        used: deviceQ.used + 1,
-        resetAt: resetTimestamp
-      });
+      sbUpdateUser(currentUser.username, {
+        credits_used: currentUser.credits_used,
+        window_start: currentUser.window_start
+      }).catch(() => {});
 
       updateAccountUI();
       return true;
     }
 
-    function formatTimeLeft(ms) {
-      if (ms <= 0) return "00:00:00";
-      const totalSec = Math.floor(ms / 1000);
-      const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
-      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
-      const s = String(totalSec % 60).padStart(2, "0");
-      return `${h}:${m}:${s}`;
-    }
-
-    function updateCountdownDisplays(resetAt) {
-      if (!resetAt) return;
-      const diff = resetAt - Date.now();
-      const formatted = formatTimeLeft(diff);
-      document.getElementById("ui-reset-timer").innerText = "Reset in: " + formatted;
-      document.getElementById("modal-countdown").innerText = formatted;
-    }
-
-    function updateAccountUI() {
-      const username = getCurrentUsername();
-      const db = getUsersDB();
-      const user = username ? db[username] : null;
-
-      const avatarEl = document.getElementById("ui-avatar");
-      const nameEl = document.getElementById("ui-username");
-      const timerEl = document.getElementById("ui-reset-timer");
-      const badgeEl = document.getElementById("ui-credits-badge");
-      const loginBtn = document.getElementById("btn-open-login");
-      const logoutBtn = document.getElementById("btn-logout");
-
-      if (!user) {
-        avatarEl.innerText = "?";
-        nameEl.innerText = "Gast (Nicht angemeldet)";
-        timerEl.innerText = "Anmelden für 5 kostenlose Samples alle 24h";
-        badgeEl.innerText = "LOGIN ERFORDERLICH";
-        badgeEl.className = "credit-badge empty";
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        return;
-      }
-
-      if (checkAndReset24h(user)) {
-        saveUsersDB(db);
-      }
-
-      avatarEl.innerText = username.charAt(0).toUpperCase();
-      nameEl.innerText = username + (user.isVip ? " (VIP)" : "");
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-
-      if (user.isVip) {
-        badgeEl.innerText = "∞ UNLIMITED VIP";
-        badgeEl.className = "credit-badge vip";
-        timerEl.innerText = "Creator-Account ohne Tageslimit";
-      } else {
-        const deviceQ = getDeviceQuota();
-        const verfuegbar = Math.min(user.credits, MAX_FREE_CREDITS - deviceQ.used);
-        badgeEl.innerText = `${verfuegbar} / ${MAX_FREE_CREDITS} FREE`;
-        badgeEl.className = verfuegbar > 0 ? "credit-badge" : "credit-badge empty";
-        const activeReset = user.resetAt || deviceQ.resetAt;
-        if (activeReset && verfuegbar < MAX_FREE_CREDITS) {
-          updateCountdownDisplays(activeReset);
-        } else {
-          timerEl.innerText = "Volles Tageslimit verfügbar (Reset 24h nach Nutzung)";
-        }
-      }
-    }
-
-    setInterval(() => {
-      const username = getCurrentUsername();
-      if (!username) return;
-      const db = getUsersDB();
-      const user = db[username];
-      if (!user || user.isVip) return;
-
-      const deviceQ = getDeviceQuota();
-      if (checkAndReset24h(user)) {
-        saveUsersDB(db);
-        updateAccountUI();
-        closeLimitModal();
-        setStatus("24H RESET! 5 NEUE FREE-SOUNDS VERFÜGBAR");
-      } else {
-        const activeReset = user.resetAt || deviceQ.resetAt;
-        if (activeReset && user.credits < MAX_FREE_CREDITS) {
-          updateCountdownDisplays(activeReset);
-        }
-      }
-    }, 1000);
-
-    // =========================================================================
-    // 1. WEB AUDIO API ENGINE MIT MASTER LIMITER & MONO/POLY
-    // =========================================================================
+    /* =========================================================================
+       2. AUDIO ENGINE, 6-IN-1 KICKS & NEUER RAVE-MELODIEN-GENERATOR
+       ========================================================================= */
     let audioCtx = null;
-    let masterLimiter = null;
-    const aktiveStimmen = {};
+    let isPlaying = false;
+    let currentStep = 0;
+    let stepTimer = null;
+    let activeKickMode = 'hard';
 
-    function initAudioEngine() {
+    const KICK_PRESETS = {
+      soft:       { label: 'SOFT KICK',   start: 165, end: 46, punch: 4,  tail: 0.9, crunch: 0.00, drive: 2.0,  dauer: 0.45 },
+      hard:       { label: 'HARD KICK',   start: 240, end: 45, punch: 6,  tail: 1.0, crunch: 0.15, drive: 5.5,  dauer: 0.50 },
+      industrial: { label: 'INDUSTRIAL',  start: 330, end: 42, punch: 9,  tail: 1.8, crunch: 0.65, drive: 12.0, dauer: 0.65 },
+      gabber:     { label: 'GABBER',      start: 410, end: 48, punch: 11, tail: 1.3, crunch: 0.35, drive: 18.0, dauer: 0.50 },
+      schranz:    { label: 'SCHRANZ',     start: 290, end: 52, punch: 8,  tail: 1.5, crunch: 0.80, drive: 14.0, dauer: 0.40 },
+      hardtechno: { label: 'HARD TECHNO', start: 210, end: 40, punch: 5,  tail: 2.1, crunch: 0.25, drive: 6.5,  dauer: 0.60 }
+    };
+
+    const trackVoiceModes = ['mono', 'mono', 'poly', 'mono'];
+    const activeNodesByTrack = [[], [], [], []];
+
+    const sequenceGrid = [
+      [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0],
+      [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1],
+      [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1],
+      [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0]
+    ];
+
+    const presetSamples = [
+      { title: 'SVENTEKK_Hard_Kick_180BPM.wav', type: 'Hard Kick', generator: 'hardtekk' },
+      { title: 'SVENTEKK_Industrial_Rumble.wav', type: 'Industrial', generator: 'industrial' },
+      { title: 'SVENTEKK_Gabber_Distorted.wav', type: 'Gabber', generator: 'gabber' },
+      { title: 'SVENTEKK_Uptempo_Piep_210.wav', type: 'Uptempo', generator: 'uptempo' },
+      { title: 'SVENTEKK_Rave_Hook_Lead.wav', type: 'Melodie', generator: 'melody' }
+    ];
+
+    function setKickMode(mode) {
+      const p = KICK_PRESETS[mode];
+      if (!p) return;
+      activeKickMode = mode;
+
+      document.querySelectorAll('.style-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+      document.getElementById('kick-mode-badge').innerText = p.label;
+
+      document.getElementById('start_hz').value = p.start;
+      document.getElementById('val-start').innerText = p.start;
+      document.getElementById('end_hz').value = p.end;
+      document.getElementById('val-end').innerText = p.end;
+      document.getElementById('kick_punch').value = p.punch;
+      document.getElementById('val-punch').innerText = p.punch;
+      document.getElementById('kick_tail').value = p.tail;
+      document.getElementById('val-tail').innerText = p.tail;
+      document.getElementById('kick_crunch').value = p.crunch;
+      document.getElementById('val-crunch').innerText = p.crunch;
+      document.getElementById('drive').value = p.drive;
+      document.getElementById('val-drive').innerText = p.drive;
+      document.getElementById('dauer').value = p.dauer;
+      document.getElementById('val-dauer').innerText = p.dauer;
+
+      setStatus(`KICK MODUS: ${p.label}`);
+    }
+
+    function getAudioCtx() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        masterLimiter = audioCtx.createDynamicsCompressor();
-        masterLimiter.threshold.setValueAtTime(-3.0, audioCtx.currentTime);
-        masterLimiter.knee.setValueAtTime(6.0, audioCtx.currentTime);
-        masterLimiter.ratio.setValueAtTime(16.0, audioCtx.currentTime);
-        masterLimiter.attack.setValueAtTime(0.002, audioCtx.currentTime);
-        masterLimiter.release.setValueAtTime(0.08, audioCtx.currentTime);
-        masterLimiter.connect(audioCtx.destination);
       }
-      if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-      }
-    }
-
-    function spieleSamplesDirekt(samplesFloat32, sampleRate, spurId, voiceMode) {
-      initAudioEngine();
-
-      if (voiceMode === "mono" && aktiveStimmen[spurId]) {
-        try {
-          const alt = aktiveStimmen[spurId];
-          const now = audioCtx.currentTime;
-          alt.gain.gain.cancelScheduledValues(now);
-          alt.gain.gain.setValueAtTime(alt.gain.gain.value, now);
-          alt.gain.gain.linearRampToValueAtTime(0, now + 0.004);
-          alt.source.stop(now + 0.005);
-        } catch (e) {}
-      }
-
-      const audioBuffer = audioCtx.createBuffer(1, samplesFloat32.length, sampleRate);
-      audioBuffer.getChannelData(0).set(samplesFloat32);
-
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-
-      const gainNode = audioCtx.createGain();
-      gainNode.gain.setValueAtTime(0.88, audioCtx.currentTime);
-
-      source.connect(gainNode);
-      gainNode.connect(masterLimiter);
-      source.start();
-
-      if (spurId) {
-        aktiveStimmen[spurId] = { source, gain: gainNode };
-      }
-    }
-
-    function erstelleWavDatei(samplesFloat32, sampleRate) {
-      const gesamtSamples = samplesFloat32.length;
-      const buffer = new ArrayBuffer(44 + gesamtSamples * 2);
-      const view = new DataView(buffer);
-      const writeStr = (offset, str) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      };
-      writeStr(0, "RIFF");
-      view.setUint32(4, 36 + gesamtSamples * 2, true);
-      writeStr(8, "WAVE");
-      writeStr(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeStr(36, "data");
-      view.setUint32(40, gesamtSamples * 2, true);
-
-      for (let i = 0; i < gesamtSamples; i++) {
-        const clamped = Math.max(-1, Math.min(1, samplesFloat32[i]));
-        view.setInt16(44 + i * 2, Math.floor(clamped * 32767), true);
-      }
-      return buffer;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
     }
 
     function setStatus(text) {
-      document.getElementById("studio-status-text").innerText = text;
+      document.getElementById('studio-status-text').innerText = text;
     }
 
-    function ausgebenOderLaden(samplesFloat32, sampleRate, download, dateiname, onDownloaded, spurId = null, voiceMode = "mono") {
-      if (download) {
-        if (!verbraucheFreeCredit()) return;
+    function updateBpm(val) {
+      document.getElementById('val-bpm').innerText = val;
+      document.getElementById('header-bpm').innerText = val;
+    }
 
-        const wavBuffer = erstelleWavDatei(samplesFloat32, sampleRate);
-        const blob = new Blob([wavBuffer], { type: "audio/wav" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = dateiname;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        onDownloaded();
-        setStatus("GESPEICHERT: " + dateiname);
+    function registerVoice(trackIdx, stopFn) {
+      if (trackIdx === null || trackIdx === undefined) return;
+      if (trackVoiceModes[trackIdx] === 'mono') {
+        while (activeNodesByTrack[trackIdx].length > 0) {
+          const oldStop = activeNodesByTrack[trackIdx].pop();
+          try { oldStop(); } catch (e) {}
+        }
+      }
+      activeNodesByTrack[trackIdx].push(stopFn);
+    }
+
+    function makeDistortionCurve(amount, mode = 'soft') {
+      const k = typeof amount === 'number' ? amount * 18 : 50;
+      const n = 44100;
+      const curve = new Float32Array(n);
+      for (let i = 0; i < n; ++i) {
+        const x = (i * 2) / n - 1;
+        if (mode === 'gabber' || mode === 'square') {
+          curve[i] = Math.max(-0.92, Math.min(0.92, Math.tanh(x * (k / 14)) * 1.25));
+        } else if (mode === 'industrial' || mode === 'schranz') {
+          curve[i] = Math.sin(Math.tanh(x * (k / 20)) * 2.2);
+        } else {
+          curve[i] = Math.tanh(x * (k / 25));
+        }
+      }
+      return curve;
+    }
+
+    function triggerKick(ctx, dest, params, startTime, trackIdx = null) {
+      const { startHz, endHz, drive, duration, mode = 'hard', punch = 6, tail = 1.0, crunch = 0.15 } = params;
+
+      const osc = ctx.createOscillator();
+      const subOsc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const shaper = ctx.createWaveShaper();
+      const postFilter = ctx.createBiquadFilter();
+
+      osc.type = (mode === 'gabber') ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(startHz, startTime);
+      const dropTime = Math.max(0.025, 0.16 / (punch / 4));
+      osc.frequency.exponentialRampToValueAtTime(Math.max(25, endHz), startTime + dropTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(22, endHz * 0.85), startTime + duration);
+
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(endHz * 1.5, startTime);
+      subOsc.frequency.exponentialRampToValueAtTime(endHz, startTime + 0.08);
+      const subGain = ctx.createGain();
+      subGain.gain.setValueAtTime(Math.min(0.8, tail * 0.45), startTime);
+      subGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      let noiseSrc = null;
+      if (crunch > 0.02) {
+        const bufSize = Math.floor(ctx.sampleRate * duration);
+        const nBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+        const nData = nBuf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) nData[i] = Math.random() * 2 - 1;
+
+        noiseSrc = ctx.createBufferSource();
+        noiseSrc.buffer = nBuf;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(mode === 'schranz' ? 1400 : 950, startTime);
+        bp.Q.setValueAtTime(2.5, startTime);
+
+        const nGain = ctx.createGain();
+        nGain.gain.setValueAtTime(crunch * 0.45, startTime);
+        nGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.85);
+
+        noiseSrc.connect(bp);
+        bp.connect(nGain);
+        nGain.connect(shaper);
+      }
+
+      shaper.curve = makeDistortionCurve(drive, mode);
+      shaper.oversample = '4x';
+
+      postFilter.type = 'lowpass';
+      postFilter.frequency.setValueAtTime(mode === 'soft' ? 1800 : 7500, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.95, startTime + 0.005);
+      gain.gain.setValueAtTime(0.88, startTime + Math.min(duration * 0.55, 0.28));
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.connect(shaper);
+      subOsc.connect(subGain);
+      subGain.connect(shaper);
+      shaper.connect(postFilter);
+      postFilter.connect(gain);
+      gain.connect(dest);
+
+      osc.start(startTime);
+      subOsc.start(startTime);
+      if (noiseSrc) noiseSrc.start(startTime);
+
+      osc.stop(startTime + duration + 0.02);
+      subOsc.stop(startTime + duration + 0.02);
+      if (noiseSrc) noiseSrc.stop(startTime + duration + 0.02);
+
+      registerVoice(trackIdx, () => {
+        try {
+          gain.gain.cancelScheduledValues(ctx.currentTime);
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          osc.stop();
+          subOsc.stop();
+          if (noiseSrc) noiseSrc.stop();
+        } catch (e) {}
+      });
+    }
+
+    function triggerSnare(ctx, dest, toneHz, duration, startTime, trackIdx = null) {
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(900, startTime);
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.75, startTime);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(toneHz, startTime);
+      osc.frequency.exponentialRampToValueAtTime(65, startTime + 0.09);
+      const oscGain = ctx.createGain();
+      oscGain.gain.setValueAtTime(0.85, startTime);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+
+      noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(dest);
+      osc.connect(oscGain); oscGain.connect(dest);
+      noise.start(startTime); osc.start(startTime);
+      noise.stop(startTime + duration); osc.stop(startTime + 0.14);
+
+      registerVoice(trackIdx, () => {
+        try {
+          noiseGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          oscGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          noise.stop(); osc.stop();
+        } catch (e) {}
+      });
+    }
+
+    function triggerHiHat(ctx, dest, startTime, open = false, trackIdx = null) {
+      const dur = open ? 0.16 : 0.045;
+      const bufferSize = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(6500, startTime);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.45, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+      src.connect(filter); filter.connect(gain); gain.connect(dest);
+      src.start(startTime); src.stop(startTime + dur);
+
+      registerVoice(trackIdx, () => {
+        try {
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          src.stop();
+        } catch (e) {}
+      });
+    }
+
+    /* RAVE MELODIEN-GENERATOR */
+    const MELODY_SCALES = {
+      phrygian: [164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63],
+      aminor:   [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00],
+      fminor:   [174.61, 196.00, 207.65, 233.08, 261.63, 277.18, 311.13, 349.23],
+      dminor:   [146.83, 164.81, 174.61, 196.00, 220.00, 233.08, 261.63, 293.66],
+      harmonic: [196.00, 220.00, 233.08, 261.63, 293.66, 311.13, 369.99, 392.00],
+      cminor:   [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08, 261.63],
+      major:    [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+    };
+
+    const MELODY_PATTERNS = {
+      offbeat:   [0, 3, 2, 4, 0, 5, 4, 3],
+      staircase: [0, 1, 2, 3, 4, 5, 6, 7],
+      frenzy:    [0, 7, 1, 6, 0, 5, 2, 7],
+      acid:      [0, 0, 3, 0, 4, 1, 5, 0],
+      anthem:    [4, 4, 5, 3, 2, 2, 3, 0],
+      octave:    [0, 7, 0, 7, 3, 7, 4, 7]
+    };
+
+    let currentMelodyIndices = [...MELODY_PATTERNS.offbeat];
+
+    function buildMelodyNotes() {
+      const patternType = document.getElementById('melody_pattern')?.value || 'offbeat';
+      if (patternType === 'random') {
+        const next = [];
+        for (let i = 0; i < 8; i++) next.push(Math.floor(Math.random() * 8));
+        currentMelodyIndices = next;
+      } else if (MELODY_PATTERNS[patternType]) {
+        currentMelodyIndices = [...MELODY_PATTERNS[patternType]];
+      }
+      return getActiveMelodyFrequencies();
+    }
+
+    function getActiveMelodyFrequencies() {
+      const scaleKey = document.getElementById('melody_scale')?.value || 'phrygian';
+      const scale = MELODY_SCALES[scaleKey] || MELODY_SCALES.phrygian;
+      return currentMelodyIndices.map(idx => scale[idx % scale.length]);
+    }
+
+    function randomizeMelody() {
+      const scales = Object.keys(MELODY_SCALES);
+      document.getElementById('melody_pattern').value = 'random';
+      document.getElementById('melody_scale').value = scales[Math.floor(Math.random() * scales.length)];
+      buildMelodyNotes();
+      playMelody();
+    }
+
+    function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
+      const synthType = document.getElementById('melody_synth')?.value || 'supersaw';
+      const cutoff = parseFloat(document.getElementById('mel_cutoff')?.value || 3200);
+      const detune = parseFloat(document.getElementById('mel_detune')?.value || 18);
+
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      if (synthType === 'acid303') {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        filter.type = 'lowpass';
+        filter.Q.setValueAtTime(14, startTime);
+        filter.frequency.setValueAtTime(Math.max(300, cutoff * 0.25), startTime);
+        filter.frequency.exponentialRampToValueAtTime(Math.min(10000, cutoff * 1.6), startTime + 0.03);
+        filter.frequency.exponentialRampToValueAtTime(320, startTime + dur);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.42, startTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+        osc.connect(filter); filter.connect(gain); gain.connect(dest);
+        osc.start(startTime); osc.stop(startTime + dur + 0.02);
+
+        registerVoice(trackIdx, () => {
+          try { gain.gain.setValueAtTime(0.0001, ctx.currentTime); osc.stop(); } catch (e) {}
+        });
+
+      } else if (synthType === 'screech') {
+        const carrier = ctx.createOscillator();
+        const mod = ctx.createOscillator();
+        const modGain = ctx.createGain();
+
+        carrier.type = 'sawtooth';
+        carrier.frequency.setValueAtTime(freq * 1.02, startTime);
+        carrier.frequency.exponentialRampToValueAtTime(freq, startTime + dur * 0.6);
+
+        mod.type = 'square';
+        mod.frequency.setValueAtTime(freq * 1.5, startTime);
+        modGain.gain.setValueAtTime(detune * 12, startTime);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(cutoff, startTime);
+        filter.Q.setValueAtTime(2.5, startTime);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.38, startTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+        mod.connect(modGain); modGain.connect(carrier.frequency);
+        carrier.connect(filter); filter.connect(gain); gain.connect(dest);
+
+        carrier.start(startTime); mod.start(startTime);
+        carrier.stop(startTime + dur + 0.02); mod.stop(startTime + dur + 0.02);
+
+        registerVoice(trackIdx, () => {
+          try { gain.gain.setValueAtTime(0.0001, ctx.currentTime); carrier.stop(); mod.stop(); } catch (e) {}
+        });
+
+      } else if (synthType === 'pluck') {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = 'triangle';
+        osc2.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(freq, startTime);
+        osc2.frequency.setValueAtTime(freq * 2, startTime);
+        osc2.detune.setValueAtTime(detune, startTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(12000, cutoff * 1.8), startTime);
+        filter.frequency.exponentialRampToValueAtTime(400, startTime + dur * 0.8);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.36, startTime + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur * 0.85);
+
+        osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(dest);
+        osc1.start(startTime); osc2.start(startTime);
+        osc1.stop(startTime + dur + 0.02); osc2.stop(startTime + dur + 0.02);
+
+        registerVoice(trackIdx, () => {
+          try { gain.gain.setValueAtTime(0.0001, ctx.currentTime); osc1.stop(); osc2.stop(); } catch (e) {}
+        });
+
       } else {
-        spieleSamplesDirekt(samplesFloat32, sampleRate, spurId, voiceMode);
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const osc3 = ctx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc2.type = 'sawtooth';
+        osc3.type = 'square';
+
+        osc1.frequency.setValueAtTime(freq, startTime);
+        osc2.frequency.setValueAtTime(freq, startTime);
+        osc3.frequency.setValueAtTime(freq * 0.5, startTime);
+        osc1.detune.setValueAtTime(-detune, startTime);
+        osc2.detune.setValueAtTime(detune, startTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(cutoff, startTime);
+        filter.Q.setValueAtTime(4, startTime);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.34, startTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+        osc1.connect(filter); osc2.connect(filter); osc3.connect(filter);
+        filter.connect(gain); gain.connect(dest);
+
+        osc1.start(startTime); osc2.start(startTime); osc3.start(startTime);
+        osc1.stop(startTime + dur + 0.02); osc2.stop(startTime + dur + 0.02); osc3.stop(startTime + dur + 0.02);
+
+        registerVoice(trackIdx, () => {
+          try { gain.gain.setValueAtTime(0.0001, ctx.currentTime); osc1.stop(); osc2.stop(); osc3.stop(); } catch (e) {}
+        });
       }
     }
 
-    // --- 2. 6-IN-1 HARD-DANCE KICK GENERATOR ---
-    let aktuellerKickModus = "hard";
-    let kickNummer = 1;
-
-    const kickPresets = {
-      soft:       { label: "SOFT KICK",   start: 150, end: 46, punch: 5,  tail: 1.2, crunch: 0.0,  drive: 2.0,  dauer: 0.45 },
-      hard:       { label: "HARD KICK",   start: 240, end: 45, punch: 6,  tail: 1.0, crunch: 0.15, drive: 5.5,  dauer: 0.50 },
-      industrial: { label: "INDUSTRIAL",  start: 380, end: 42, punch: 8,  tail: 1.6, crunch: 0.65, drive: 11.0, dauer: 0.60 },
-      gabber:     { label: "GABBER 909",  start: 460, end: 52, punch: 7,  tail: 1.5, crunch: 0.35, drive: 22.0, dauer: 0.65 },
-      schranz:    { label: "SCHRANZ",     start: 310, end: 55, punch: 9,  tail: 0.8, crunch: 0.55, drive: 14.0, dauer: 0.36 },
-      hardtechno: { label: "HARD TECHNO", start: 220, end: 40, punch: 10, tail: 2.1, crunch: 0.25, drive: 6.5,  dauer: 0.58 }
-    };
-
-    function setKickMode(mode) {
-      aktuellerKickModus = mode;
-      const p = kickPresets[mode];
-
-      document.querySelectorAll(".style-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.mode === mode);
-      });
-      document.getElementById("kick-mode-badge").innerText = p.label;
-
-      document.getElementById("start_hz").value = p.start;      document.getElementById("val-start").innerText = p.start;
-      document.getElementById("end_hz").value = p.end;          document.getElementById("val-end").innerText = p.end;
-      document.getElementById("kick_punch").value = p.punch;    document.getElementById("val-punch").innerText = p.punch;
-      document.getElementById("kick_tail").value = p.tail;      document.getElementById("val-tail").innerText = p.tail;
-      document.getElementById("kick_crunch").value = p.crunch;  document.getElementById("val-crunch").innerText = p.crunch;
-      document.getElementById("drive").value = p.drive;         document.getElementById("val-drive").innerText = p.drive;
-      document.getElementById("dauer").value = p.dauer;         document.getElementById("val-dauer").innerText = p.dauer;
-
-      setStatus("MODUS: " + p.label);
-      kickBauen(false, "mono");
-    }
-
-    function kickBauen(download, voiceMode = "mono") {
-      const sampleRate = 44100;
-      const dauer = parseFloat(document.getElementById("dauer").value);
-      const startHz = parseFloat(document.getElementById("start_hz").value);
-      const endHz = parseFloat(document.getElementById("end_hz").value);
-      const punch = parseFloat(document.getElementById("kick_punch").value);
-      const tail = parseFloat(document.getElementById("kick_tail").value);
-      const crunch = parseFloat(document.getElementById("kick_crunch").value);
-      const drive = parseFloat(document.getElementById("drive").value);
-
-      const gesamtSamples = Math.floor(sampleRate * dauer);
-      const data = new Float32Array(gesamtSamples);
-
-      let phase = 0;
-      let rumblePhase = 0;
-
-      for (let i = 0; i < gesamtSamples; i++) {
-        const fortschritt = i / gesamtSamples;
-        const frequenz = endHz + (startHz - endHz) * Math.pow(1 - fortschritt, punch);
-        phase += (2 * Math.PI * frequenz) / sampleRate;
-
-        let basisWelle = Math.sin(phase);
-
-        if (aktuellerKickModus === "industrial") {
-          basisWelle += crunch * Math.sin(phase * 2.5) * (1 - fortschritt * 0.5);
-        } else if (aktuellerKickModus === "gabber") {
-          basisWelle += crunch * Math.sin(phase * 3);
-        } else if (aktuellerKickModus === "schranz") {
-          const saw = 2 * ((phase / (2 * Math.PI)) % 1) - 1;
-          basisWelle = basisWelle * 0.7 + saw * crunch;
-        } else if (aktuellerKickModus === "hardtechno") {
-          rumblePhase += (2 * Math.PI * (endHz * 1.5)) / sampleRate;
-          const rumble = Math.sin(rumblePhase) * Math.sin(fortschritt * Math.PI) * crunch;
-          basisWelle += rumble;
-        } else {
-          basisWelle += crunch * 0.5 * Math.sin(phase * 2);
-        }
-
-        const bassBoost = 1 + (tail - 1) * Math.sin(fortschritt * Math.PI);
-        let ton = Math.tanh(basisWelle * drive * bassBoost);
-
-        const decayPower = aktuellerKickModus === "gabber" ? 5 : (aktuellerKickModus === "soft" ? 2.2 : 3);
-        const lautstaerke = 1.0 - Math.pow(fortschritt, decayPower);
-
-        data[i] = ton * lautstaerke;
-      }
-
-      ausgebenOderLaden(
-        data,
-        sampleRate,
-        download,
-        "sventekk_" + aktuellerKickModus + "_kick_" + kickNummer + ".wav",
-        () => kickNummer++,
-        "kick",
-        voiceMode
-      );
-    }
-
-    function zufallsHardtekkKick() {
-      const s = Math.floor(140 + Math.random() * 480);
-      const e = Math.floor(36 + Math.random() * 24);
-      const p = Math.floor(4 + Math.random() * 9);
-      const c = (Math.random() * 0.75).toFixed(2);
-      const d = (2.5 + Math.random() * 16).toFixed(1);
-      document.getElementById("start_hz").value = s;     document.getElementById("val-start").innerText = s;
-      document.getElementById("end_hz").value = e;       document.getElementById("val-end").innerText = e;
-      document.getElementById("kick_punch").value = p;   document.getElementById("val-punch").innerText = p;
-      document.getElementById("kick_crunch").value = c;  document.getElementById("val-crunch").innerText = c;
-      document.getElementById("drive").value = d;        document.getElementById("val-drive").innerText = d;
-      setStatus("RANDOM " + aktuellerKickModus.toUpperCase() + " KICK");
-      kickBauen(false, "mono");
-    }
-
-    // 3. UPTEMPO KICK
-    let uptempoKickNummer = 1;
-    function uptempoKickBauen(download, voiceMode = "mono") {
-      const sampleRate = 44100;
-      const style = document.getElementById("up_style").value;
-      const curve = parseFloat(document.getElementById("up_curve").value);
-      const dauer = parseFloat(document.getElementById("up_dauer").value);
-      const startHz = parseFloat(document.getElementById("up_start_hz").value);
-      const endHz = parseFloat(document.getElementById("up_end_hz").value);
-      const drive = parseFloat(document.getElementById("up_drive").value);
-      const piezo = parseFloat(document.getElementById("up_piezo").value);
-
-      const gesamtSamples = Math.floor(sampleRate * dauer);
-      const data = new Float32Array(gesamtSamples);
-
-      let phase = 0;
-      for (let i = 0; i < gesamtSamples; i++) {
-        const fortschritt = i / gesamtSamples;
-        const frequenz = endHz + (startHz - endHz) * Math.pow(1 - fortschritt, curve);
-        phase += (2 * Math.PI * frequenz) / sampleRate;
-
-        let extraHarmonic = 0;
-        if (style === "piezo") {
-          extraHarmonic = piezo * Math.sin(phase * 3);
-        } else if (style === "zaag") {
-          const saw = 2 * ((phase / (2 * Math.PI)) % 1) - 1;
-          extraHarmonic = piezo * saw * 1.4;
-        } else if (style === "hollow") {
-          extraHarmonic = piezo * (Math.sin(phase * 2) - 0.5 * Math.sin(phase * 4));
-        }
-
-        let ton = Math.tanh((Math.sin(phase) + extraHarmonic) * drive);
-        const lautstaerke = 1.0 - Math.pow(fortschritt, 3);
-        data[i] = ton * lautstaerke;
-      }
-
-      ausgebenOderLaden(data, sampleRate, download, "sventekk_uptempo_" + style + "_" + uptempoKickNummer + ".wav", () => uptempoKickNummer++, "uptempo", voiceMode);
-    }
-
-    function zufallsUptempoKick() {
-      const styles = ["piezo", "zaag", "hollow"];
-      const st = styles[Math.floor(Math.random() * styles.length)];
-      const s = Math.floor(600 + Math.random() * 1000);
-      const p = (0.2 + Math.random() * 0.6).toFixed(2);
-      const d = (12 + Math.random() * 24).toFixed(1);
-      document.getElementById("up_style").value = st;
-      document.getElementById("up_start_hz").value = s; document.getElementById("val-up-start").innerText = s;
-      document.getElementById("up_piezo").value = p; document.getElementById("val-up-piezo").innerText = p;
-      document.getElementById("up_drive").value = d; document.getElementById("val-up-drive").innerText = d;
-      setStatus("ZUFALLS-UPTEMPO (" + st.toUpperCase() + ")");
-      uptempoKickBauen(false, "mono");
-    }
-
-    // 4. SNARE
-    let snareNummer = 1;
-    function snareBauen(download, voiceMode = "poly") {
-      const sampleRate = 44100;
-      const dauer = parseFloat(document.getElementById("snare_dauer").value);
-      const bodyHz = parseFloat(document.getElementById("snare_hz").value);
-      const snap = parseFloat(document.getElementById("snare_snap").value);
-      const noiseAnteil = parseFloat(document.getElementById("snare_noise").value);
-      const drive = parseFloat(document.getElementById("snare_drive").value);
-
-      const gesamtSamples = Math.floor(sampleRate * dauer);
-      const data = new Float32Array(gesamtSamples);
-
-      let phase = 0;
-      for (let i = 0; i < gesamtSamples; i++) {
-        const fortschritt = i / gesamtSamples;
-        const frequenz = bodyHz + (bodyHz * snap) * Math.pow(1 - fortschritt, 7);
-        phase += (2 * Math.PI * frequenz) / sampleRate;
-        const body = Math.sin(phase) * Math.pow(1 - fortschritt, 2.5);
-        const noise = (Math.random() * 2 - 1) * noiseAnteil;
-
-        let ton = Math.tanh((body + noise) * drive);
-        const lautstaerke = Math.pow(1 - fortschritt, 2);
-        data[i] = ton * lautstaerke;
-      }
-
-      ausgebenOderLaden(data, sampleRate, download, "sventekk_snare_" + snareNummer + ".wav", () => snareNummer++, "snare", voiceMode);
-    }
-
-    // 5. HI-HAT & ROLLS
-    let hihatNummer = 1;
-    function updateHatLabel() {
-      const v = document.getElementById("hat_hits").value;
-      const labels = { "1": "1x Single", "2": "2x Double", "4": "4x 16tel Roll" };
-      document.getElementById("val-hat-hits").innerText = labels[v];
-    }
-
-    function hihatBauen(download, voiceMode = "poly") {
-      const sampleRate = 44100;
-      const hits = parseInt(document.getElementById("hat_hits").value);
-      const einzelDauer = parseFloat(document.getElementById("hat_dauer").value);
-      const metallAnteil = parseFloat(document.getElementById("hat_metall").value);
-      const drive = parseFloat(document.getElementById("hat_drive").value);
-
-      const stepAbstand = Math.floor(sampleRate * (60 / 180 / 4));
-      const gesamtSamples = hits === 1
-        ? Math.floor(sampleRate * einzelDauer)
-        : stepAbstand * (hits - 1) + Math.floor(sampleRate * einzelDauer);
-
-      const data = new Float32Array(gesamtSamples);
-
-      let phase = 0;
-      let letztesNoise = 0;
-
-      for (let i = 0; i < gesamtSamples; i++) {
-        const aktuellerHit = hits === 1 ? 0 : Math.min(hits - 1, Math.floor(i / stepAbstand));
-        const lokalesI = hits === 1 ? i : i - aktuellerHit * stepAbstand;
-        const hitSamples = Math.floor(sampleRate * einzelDauer);
-
-        if (lokalesI >= hitSamples) {
-          data[i] = 0;
-          continue;
-        }
-
-        const fortschritt = lokalesI / hitSamples;
-        const noise = Math.random() * 2 - 1;
-        const hochpass = (noise - letztesNoise) * 0.5;
-        letztesNoise = noise;
-
-        phase += (2 * Math.PI * 6800) / sampleRate;
-        const metall = Math.sin(phase) * metallAnteil;
-
-        const ton = Math.tanh((hochpass + metall) * drive);
-        const akzent = hits > 1 && aktuellerHit === hits - 1 ? 1.0 : (hits > 1 ? 0.75 : 1.0);
-        const lautstaerke = Math.pow(1 - fortschritt, 4) * akzent;
-        data[i] = ton * lautstaerke;
-      }
-
-      ausgebenOderLaden(data, sampleRate, download, "sventekk_hihat_" + hits + "x_" + hihatNummer + ".wav", () => hihatNummer++, "hihat", voiceMode);
-    }
-
-    // 6. MELODIE
-    let melodieNummer = 1;
-    const tonleitern = {
-      f_phrygian: [174.61, 185.00, 207.65, 233.08, 261.63, 277.18, 311.13, 349.23],
-      f_minor:    [174.61, 196.00, 207.65, 233.08, 261.63, 277.18, 311.13, 349.23],
-      g_dark:     [196.00, 207.65, 233.08, 261.63, 293.66, 311.13, 349.23, 392.00]
-    };
-    let aktuelleMelodie = [174.61, 174.61, 207.65, 185.00, 261.63, 233.08, 185.00, 174.61];
-
-    function updateScaleLabel() {
-      const val = document.getElementById("mel_scale").value;
-      const names = {
-        f_phrygian: "F-Moll Phrygisch",
-        f_minor: "F-Moll Natural",
-        g_dark: "G-Moll Dark"
+    function getHardtekkParams() {
+      return {
+        mode: activeKickMode,
+        startHz: parseFloat(document.getElementById('start_hz').value),
+        endHz: parseFloat(document.getElementById('end_hz').value),
+        punch: parseFloat(document.getElementById('kick_punch').value),
+        tail: parseFloat(document.getElementById('kick_tail').value),
+        crunch: parseFloat(document.getElementById('kick_crunch').value),
+        drive: parseFloat(document.getElementById('drive').value),
+        duration: parseFloat(document.getElementById('dauer').value)
       };
-      document.getElementById("val-mel-scale").innerText = names[val];
-      neueMelodieWuerfeln();
     }
 
-    function neueMelodieWuerfeln() {
-      const scaleKey = document.getElementById("mel_scale").value;
-      const skale = tonleitern[scaleKey];
-      aktuelleMelodie = [];
-      for (let s = 0; s < 8; s++) {
-        if (s === 0) {
-          aktuelleMelodie.push(skale[0]);
-        } else {
-          aktuelleMelodie.push(skale[Math.floor(Math.random() * skale.length)]);
-        }
+    function getUptempoParams() {
+      return {
+        mode: 'gabber',
+        startHz: parseFloat(document.getElementById('up_start').value),
+        endHz: parseFloat(document.getElementById('up_end').value),
+        punch: 12,
+        tail: 1.2,
+        crunch: 0.25,
+        drive: parseFloat(document.getElementById('up_drive').value),
+        duration: parseFloat(document.getElementById('up_dauer').value)
+      };
+    }
+
+    /* GENERATOR ACTIONS */
+    function playHardtekkKick() {
+      if (!consumeGenerationCredit()) return;
+      const ctx = getAudioCtx();
+      triggerKick(ctx, ctx.destination, getHardtekkParams(), ctx.currentTime, 0);
+      setStatus(`PLAYING: ${KICK_PRESETS[activeKickMode].label}`);
+    }
+
+    function playUptempoKick() {
+      if (!consumeGenerationCredit()) return;
+      const ctx = getAudioCtx();
+      triggerKick(ctx, ctx.destination, getUptempoParams(), ctx.currentTime, 0);
+      setStatus('PLAYING: UPTEMPO KICK');
+    }
+
+    function playSnare() {
+      if (!consumeGenerationCredit()) return;
+      const ctx = getAudioCtx();
+      triggerSnare(ctx, ctx.destination,
+        parseFloat(document.getElementById('snare_tone').value),
+        parseFloat(document.getElementById('snare_len').value),
+        ctx.currentTime, 1);
+      setStatus('PLAYING: RAVE SNARE');
+    }
+
+    function playHatRoll() {
+      if (!consumeGenerationCredit()) return;
+      const ctx = getAudioCtx();
+      const hits = parseInt(document.getElementById('hat_hits').value, 10);
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const stepSec = (60 / bpm) / 4;
+      for (let i = 0; i < hits; i++) {
+        triggerHiHat(ctx, ctx.destination, ctx.currentTime + i * stepSec, i === hits - 1, 2);
       }
-      setStatus("NEUES RIFF GEWÜRFELT");
-      melodieBauen(false, "mono");
+      setStatus(`PLAYING: ${hits}x HAT ROLL`);
     }
 
-    function melodieBauen(download, voiceMode = "mono") {
+    function playMelody() {
+      if (!consumeGenerationCredit()) return;
+      const ctx = getAudioCtx();
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const stepSec = (60 / bpm) / 2;
+      const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.82);
+      const notes = getActiveMelodyFrequencies();
+
+      notes.forEach((f, idx) => {
+        triggerLeadNote(ctx, ctx.destination, f, stepSec * gate, ctx.currentTime + idx * stepSec, 3);
+      });
+      setStatus('PLAYING: RAVE MELODY HOOK');
+    }
+
+    /* WAV EXPORT */
+    function audioBufferToWav(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const out = new ArrayBuffer(length);
+      const view = new DataView(out);
+      let offset = 0;
+      let pos = 0;
+      const setUint16 = d => { view.setUint16(pos, d, true); pos += 2; };
+      const setUint32 = d => { view.setUint32(pos, d, true); pos += 4; };
+
+      setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+      setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+      setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+
+      const channels = [];
+      for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          view.setInt16(pos, sample, true); pos += 2;
+        }
+        offset++;
+      }
+      return new Blob([out], { type: 'audio/wav' });
+    }
+
+    async function renderAndDownload(durationSec, filename, renderFn) {
+      if (!consumeGenerationCredit()) return;
       const sampleRate = 44100;
-      const waveType = document.getElementById("mel_wave").value;
-      const rhythm = document.getElementById("mel_rhythm").value;
-      const bpm = parseFloat(document.getElementById("mel_bpm").value);
-      const oktave = parseFloat(document.getElementById("mel_oktave").value);
-      const detune = parseFloat(document.getElementById("mel_detune").value);
-      const drive = parseFloat(document.getElementById("mel_drive").value);
-
-      const stepDauer = (60 / bpm) / 2;
-      const gesamtDauer = stepDauer * 8;
-      const gesamtSamples = Math.floor(sampleRate * gesamtDauer);
-      const samplesProStep = Math.floor(sampleRate * stepDauer);
-
-      const data = new Float32Array(gesamtSamples);
-
-      let phase1 = 0;
-      let phase2 = 0;
-
-      for (let i = 0; i < gesamtSamples; i++) {
-        const stepIndex = Math.min(7, Math.floor(i / samplesProStep));
-        const stepFortschritt = (i % samplesProStep) / samplesProStep;
-
-        if (rhythm === "offbeat" && stepIndex % 2 === 0) {
-          data[i] = 0;
-          continue;
-        }
-        if (rhythm === "gallop" && (stepIndex === 2 || stepIndex === 6)) {
-          data[i] = 0;
-          continue;
-        }
-
-        const freq = aktuelleMelodie[stepIndex] * Math.pow(2, oktave / 12);
-        phase1 = (phase1 + freq / sampleRate) % 1;
-        phase2 = (phase2 + (freq * (1 + detune)) / sampleRate) % 1;
-
-        let raw = 0;
-        if (waveType === "supersaw") {
-          raw = ((2 * phase1 - 1) + (2 * phase2 - 1)) * 0.5;
-        } else if (waveType === "square") {
-          const sq1 = phase1 < 0.5 ? 1 : -1;
-          const sq2 = phase2 < 0.5 ? 1 : -1;
-          raw = (sq1 + sq2) * 0.45;
-        } else if (waveType === "screech") {
-          const saw = 2 * phase1 - 1;
-          const screech = Math.sin(phase2 * Math.PI * 6);
-          raw = (saw + screech) * 0.5;
-        }
-
-        const noteHuellkurve = Math.pow(1 - stepFortschritt, 1.5);
-        data[i] = Math.tanh(raw * drive) * noteHuellkurve * 0.75;
-      }
-
-      ausgebenOderLaden(data, sampleRate, download, "sventekk_" + waveType + "_" + melodieNummer + ".wav", () => melodieNummer++, "melody", voiceMode);
+      const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * durationSec), sampleRate);
+      renderFn(offlineCtx, offlineCtx.destination);
+      const renderedBuffer = await offlineCtx.startRendering();
+      const wavBlob = audioBufferToWav(renderedBuffer);
+      const url = URL.createObjectURL(wavBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setStatus('EXPORTED: ' + filename);
     }
 
-    // 7. 16-STEP SEQUENZER
-    const spuren = [
-      { name: "01 Rave Kick", voice: "mono", fn: (v) => kickBauen(false, v), color: "", pattern: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0] },
-      { name: "02 Uptempo",   voice: "mono", fn: (v) => uptempoKickBauen(false, v), color: "", pattern: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0] },
-      { name: "03 Snare",     voice: "poly", fn: (v) => snareBauen(false, v), color: "cyan", pattern: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1] },
-      { name: "04 Hi-Hat",    voice: "poly", fn: (v) => hihatBauen(false, v), color: "cyan", pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
-      { name: "05 Melodie",   voice: "mono", fn: (v) => melodieBauen(false, v), color: "cyan", pattern: [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] }
-    ];
+    function downloadHardtekkKick() {
+      const p = getHardtekkParams();
+      renderAndDownload(p.duration + 0.05, `SVENTEKK_${p.mode}_Kick_${p.startHz}Hz.wav`,
+        (ctx, dest) => triggerKick(ctx, dest, p, 0));
+    }
 
-    let seqLaeuft = false;
-    let aktuellerStep = 0;
-    let seqTimer = null;
+    function downloadUptempoKick() {
+      const p = getUptempoParams();
+      renderAndDownload(p.duration + 0.05, `SVENTEKK_Uptempo_Kick_${p.startHz}Hz.wav`,
+        (ctx, dest) => triggerKick(ctx, dest, p, 0));
+    }
 
-    function baueSequencerUI() {
-      const grid = document.getElementById("sequencer-grid");
-      grid.innerHTML = "";
-      spuren.forEach((spur, sIdx) => {
-        const row = document.createElement("div");
-        row.className = "seq-row";
+    function downloadSnare() {
+      const tone = parseFloat(document.getElementById('snare_tone').value);
+      const len = parseFloat(document.getElementById('snare_len').value);
+      renderAndDownload(len + 0.05, 'SVENTEKK_Rave_Snare.wav',
+        (ctx, dest) => triggerSnare(ctx, dest, tone, len, 0));
+    }
 
-        const leftBox = document.createElement("div");
-        leftBox.className = "seq-track-controls";
+    function downloadHatRoll() {
+      const hits = parseInt(document.getElementById('hat_hits').value, 10);
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const stepSec = (60 / bpm) / 4;
+      renderAndDownload(hits * stepSec + 0.2, `SVENTEKK_HatRoll_${hits}x.wav`, (ctx, dest) => {
+        for (let i = 0; i < hits; i++) triggerHiHat(ctx, dest, i * stepSec, i === hits - 1);
+      });
+    }
 
-        const label = document.createElement("span");
-        label.className = "seq-label";
-        label.innerText = spur.name;
-        leftBox.appendChild(label);
+    function downloadMelody() {
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const stepSec = (60 / bpm) / 2;
+      const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.82);
+      const notes = getActiveMelodyFrequencies();
+      renderAndDownload(notes.length * stepSec + 0.2, `SVENTEKK_Rave_Melody_${bpm}BPM.wav`, (ctx, dest) => {
+        notes.forEach((f, idx) => triggerLeadNote(ctx, dest, f, stepSec * gate, idx * stepSec));
+      });
+    }
 
-        const voiceBtn = document.createElement("button");
-        voiceBtn.className = "voice-btn " + spur.voice;
-        voiceBtn.innerText = spur.voice.toUpperCase();
-        voiceBtn.onclick = () => {
-          spur.voice = spur.voice === "mono" ? "poly" : "mono";
-          voiceBtn.className = "voice-btn " + spur.voice;
-          voiceBtn.innerText = spur.voice.toUpperCase();
-          setStatus(spur.name + " → " + spur.voice.toUpperCase());
+    /* SEQUENZER */
+    function renderSequencerUI() {
+      const container = document.getElementById('sequencer-rows');
+      container.innerHTML = '';
+      const trackNames = ['01 KICK', '02 SNARE', '03 HI-HAT', '04 MELODY'];
+
+      trackNames.forEach((name, tIdx) => {
+        const row = document.createElement('div');
+        row.className = 'seq-row';
+
+        const controls = document.createElement('div');
+        controls.className = 'seq-track-controls';
+
+        const label = document.createElement('div');
+        label.className = 'seq-label';
+        label.innerText = name;
+
+        const vBtn = document.createElement('button');
+        vBtn.type = 'button';
+        const isPoly = trackVoiceModes[tIdx] === 'poly';
+        vBtn.className = 'voice-btn' + (isPoly ? ' poly' : '');
+        vBtn.innerText = isPoly ? 'POLY' : 'MONO';
+        vBtn.onclick = () => {
+          trackVoiceModes[tIdx] = trackVoiceModes[tIdx] === 'mono' ? 'poly' : 'mono';
+          renderSequencerUI();
         };
-        leftBox.appendChild(voiceBtn);
 
-        row.appendChild(leftBox);
+        controls.appendChild(label);
+        controls.appendChild(vBtn);
+        row.appendChild(controls);
 
-        const pads = document.createElement("div");
-        pads.className = "seq-steps";
+        const stepsWrap = document.createElement('div');
+        stepsWrap.className = 'seq-steps';
 
-        for (let step = 0; step < 16; step++) {
-          const pad = document.createElement("div");
-          pad.className = "step-btn " + spur.color + (spur.pattern[step] ? " on" : "");
-          pad.innerText = step + 1;
-          pad.dataset.spur = sIdx;
-          pad.dataset.step = step;
-          pad.onclick = () => {
-            spur.pattern[step] = spur.pattern[step] ? 0 : 1;
-            pad.classList.toggle("on");
+        for (let s = 0; s < 16; s++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'step-btn';
+          btn.id = `step-${tIdx}-${s}`;
+          btn.innerText = s + 1;
+          if (sequenceGrid[tIdx][s]) {
+            btn.classList.add('on');
+            if (tIdx === 0) btn.classList.add('cyan');
+            if (tIdx === 3) btn.classList.add('purple');
+          }
+          btn.onclick = () => {
+            sequenceGrid[tIdx][s] = sequenceGrid[tIdx][s] ? 0 : 1;
+            btn.classList.toggle('on');
+            if (tIdx === 0) btn.classList.toggle('cyan', !!sequenceGrid[tIdx][s]);
+            if (tIdx === 3) btn.classList.toggle('purple', !!sequenceGrid[tIdx][s]);
           };
-          pads.appendChild(pad);
+          stepsWrap.appendChild(btn);
         }
-
-        row.appendChild(pads);
-        grid.appendChild(row);
+        row.appendChild(stepsWrap);
+        container.appendChild(row);
       });
     }
 
-    function seqStepAbspielen() {
-      document.querySelectorAll(".step-btn.now").forEach(el => el.classList.remove("now"));
-      document.querySelectorAll(`.step-btn[data-step="${aktuellerStep}"]`).forEach(el => el.classList.add("now"));
+    function playStepSounds(step) {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const stepSec = (60 / bpm) / 4;
+      const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.82);
+      const notes = getActiveMelodyFrequencies();
 
-      spuren.forEach(spur => {
-        if (spur.pattern[aktuellerStep] === 1) {
-          spur.fn(spur.voice);
-        }
-      });
+      if (sequenceGrid[0][step]) {
+        const p = bpm >= 200 ? getUptempoParams() : getHardtekkParams();
+        triggerKick(ctx, ctx.destination, p, now, 0);
+      }
+      if (sequenceGrid[1][step]) {
+        triggerSnare(ctx, ctx.destination,
+          parseFloat(document.getElementById('snare_tone').value),
+          parseFloat(document.getElementById('snare_len').value), now, 1);
+      }
+      if (sequenceGrid[2][step]) {
+        triggerHiHat(ctx, ctx.destination, now, step % 4 === 2, 2);
+      }
+      if (sequenceGrid[3][step]) {
+        const freq = notes[step % notes.length];
+        triggerLeadNote(ctx, ctx.destination, freq, stepSec * 1.6 * gate, now, 3);
+      }
+    }
 
-      aktuellerStep = (aktuellerStep + 1) % 16;
+    function runSequencerLoop() {
+      if (!isPlaying) return;
+      document.querySelectorAll('.step-btn.now').forEach(el => el.classList.remove('now'));
+      for (let t = 0; t < 4; t++) {
+        const el = document.getElementById(`step-${t}-${currentStep}`);
+        if (el) el.classList.add('now');
+      }
+      playStepSounds(currentStep);
+      currentStep = (currentStep + 1) % 16;
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      stepTimer = setTimeout(runSequencerLoop, ((60 / bpm) / 4) * 1000);
     }
 
     function toggleSequencer() {
-      const btn = document.getElementById("seq-play-btn");
-      if (seqLaeuft) {
-        clearInterval(seqTimer);
-        seqLaeuft = false;
-        btn.innerText = "▶ Start";
-        setStatus("LOOP GESTOPPT");
-        document.querySelectorAll(".step-btn.now").forEach(el => el.classList.remove("now"));
+      const btn = document.getElementById('btn-seq-play');
+      if (isPlaying) {
+        isPlaying = false;
+        clearTimeout(stepTimer);
+        document.querySelectorAll('.step-btn.now').forEach(el => el.classList.remove('now'));
+        btn.innerText = '▶ START';
+        setStatus('SEQUENCER STOPPED');
       } else {
-        initAudioEngine();
-        seqLaeuft = true;
-        aktuellerStep = 0;
-        btn.innerText = "⏹ Stop";
-        setStatus("LOOP LÄUFT LIVE");
-        seqStepAbspielen();
-        const bpm = parseFloat(document.getElementById("seq_bpm").value);
-        seqTimer = setInterval(seqStepAbspielen, (60 / bpm / 4) * 1000);
+        if (!currentUser) {
+          openAuthModal('register');
+          return;
+        }
+        getAudioCtx();
+        isPlaying = true;
+        currentStep = 0;
+        btn.innerText = '■ STOP';
+        setStatus('LIVE LOOPING');
+        runSequencerLoop();
       }
     }
 
-    function updateMasterTempo(val) {
-      document.getElementById("val-seq-bpm").innerText = val;
-      document.getElementById("header-bpm").innerText = val;
-      if (seqLaeuft) {
-        clearInterval(seqTimer);
-        seqTimer = setInterval(seqStepAbspielen, (60 / parseFloat(val) / 4) * 1000);
-      }
+    function clearSequencer() {
+      for (let t = 0; t < 4; t++) sequenceGrid[t].fill(0);
+      renderSequencerUI();
     }
 
-    function ladeBeatPreset(typ) {
-      if (typ === "hardtekk") {
-        setKickMode("hard");
-        updateMasterTempo(180);
-        document.getElementById("seq_bpm").value = 180;
-        spuren[0].pattern = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0];
-        spuren[1].pattern = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0];
-        spuren[2].pattern = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1];
-        spuren[3].pattern = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
-        spuren[4].pattern = [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
-        setStatus("PRESET: HARDTEKK 180 BPM");
-      } else if (typ === "schranz") {
-        setKickMode("schranz");
-        updateMasterTempo(160);
-        document.getElementById("seq_bpm").value = 160;
-        spuren[0].pattern = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,1];
-        spuren[1].pattern = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
-        spuren[2].pattern = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
-        spuren[3].pattern = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
-        spuren[4].pattern = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
-        setStatus("PRESET: SCHRANZ 160 BPM");
-      } else if (typ === "uptempo") {
-        updateMasterTempo(215);
-        document.getElementById("seq_bpm").value = 215;
-        spuren[0].pattern = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
-        spuren[1].pattern = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,1];
-        spuren[2].pattern = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
-        spuren[3].pattern = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1];
-        spuren[4].pattern = [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
-        setStatus("PRESET: UPTEMPO 215 BPM");
+    function loadPresetPattern(type) {
+      if (type === 'hardtekk') {
+        updateBpm(180); document.getElementById('bpm').value = 180;
+        setKickMode('hard');
+        sequenceGrid[0] = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0];
+        sequenceGrid[1] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1];
+        sequenceGrid[2] = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1];
+        sequenceGrid[3] = [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0];
+      } else {
+        updateBpm(210); document.getElementById('bpm').value = 210;
+        sequenceGrid[0] = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,1,1,1];
+        sequenceGrid[1] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0];
+        sequenceGrid[2] = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,1,1,1];
+        sequenceGrid[3] = [1,1,0,1, 1,0,1,0, 1,1,0,1, 1,1,1,0];
       }
-      baueSequencerUI();
+      renderSequencerUI();
     }
 
-    function seqClear() {
-      spuren.forEach(s => s.pattern.fill(0));
-      baueSequencerUI();
-      setStatus("PATTERN ZURÜCKGESETZT");
-    }
+    /* SAMPLE LIBRARY */
+    function renderSampleLibrary() {
+      const container = document.getElementById('sample-library-list');
+      container.innerHTML = '';
 
-    // 8. SAMPLE LIBRARY & UPLOAD (MIT XSS-SCHUTZ)
-    const sampleBank = [];
+      presetSamples.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'sample-item';
 
-    function renderSampleBank() {
-      const grid = document.getElementById("sample-bank-grid");
-      grid.innerHTML = "";
+        const top = document.createElement('div');
+        top.className = 'sample-top';
 
-      if (sampleBank.length === 0) {
-        grid.innerHTML = `
-          <div style="color: var(--text-dim); font-size: 0.86rem; padding: 10px;">
-            Noch keine eigenen Samples geladen. Klick oben rechts auf <strong>„⬆ Eigenes Sample hochladen“</strong>, um deine .WAV- oder .MP3-Dateien hier zu testen.
-          </div>
-        `;
-        return;
-      }
+        const title = document.createElement('span');
+        title.className = 'sample-title';
+        title.textContent = item.title;
 
-      sampleBank.forEach((sample, idx) => {
-        const card = document.createElement("div");
-        card.className = "sample-item";
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = item.type;
 
-        const safeName = escapeHtml(sample.name);
-        card.innerHTML = `
-          <div class="sample-top">
-            <span class="sample-title">${safeName}</span>
-            <span class="chip">UPLOAD</span>
-          </div>
-          <div class="actions">
-            <button class="btn btn-cyan" onclick="sampleAnhoeren(${idx})">▶ Anhören</button>
-            <a class="btn btn-orange" href="${sample.url}" download="${safeName}">⬇ .WAV</a>
-          </div>
-        `;
-        grid.appendChild(card);
+        top.appendChild(title);
+        top.appendChild(chip);
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.className = 'btn btn-cyan';
+        playBtn.textContent = '▶ Anhören';
+        playBtn.onclick = () => playLibraryPreset(item.generator);
+
+        const dlBtn = document.createElement('button');
+        dlBtn.type = 'button';
+        dlBtn.className = 'btn btn-ghost';
+        dlBtn.textContent = '⬇ .WAV';
+        dlBtn.onclick = () => downloadLibraryPreset(item.generator);
+
+        actions.appendChild(playBtn);
+        actions.appendChild(dlBtn);
+
+        card.appendChild(top);
+        card.appendChild(actions);
+        container.appendChild(card);
       });
     }
 
-    function sampleAnhoeren(idx) {
-      const sample = sampleBank[idx];
-      if (!sample) return;
-      const audio = new Audio(sample.url);
-      audio.play();
-      setStatus("SPIELT: " + sample.name.slice(0, 24));
+    function playLibraryPreset(type) {
+      if (type === 'hardtekk') { setKickMode('hard'); playHardtekkKick(); }
+      else if (type === 'industrial') { setKickMode('industrial'); playHardtekkKick(); }
+      else if (type === 'gabber') { setKickMode('gabber'); playHardtekkKick(); }
+      else if (type === 'uptempo') playUptempoKick();
+      else playMelody();
     }
 
-    function eigeneSamplesHochladen(files) {
-      let count = 0;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith("audio/")) continue;
-        const tempUrl = URL.createObjectURL(file);
-        sampleBank.unshift({
-          name: file.name,
-          url: tempUrl
-        });
-        count++;
-      }
-      renderSampleBank();
-      if (count > 0) setStatus(count + " AUDIO-SAMPLE(S) GELADEN");
+    function downloadLibraryPreset(type) {
+      if (type === 'hardtekk') { setKickMode('hard'); downloadHardtekkKick(); }
+      else if (type === 'industrial') { setKickMode('industrial'); downloadHardtekkKick(); }
+      else if (type === 'gabber') { setKickMode('gabber'); downloadHardtekkKick(); }
+      else if (type === 'uptempo') downloadUptempoKick();
+      else downloadMelody();
     }
 
-    // START-INITIALISIERUNG
-    updateAccountUI();
-    baueSequencerUI();
-    renderSampleBank();
+    function handleAudioUpload(event) {
+      const files = Array.from(event.target.files || []);
+      const container = document.getElementById('sample-library-list');
+
+      files.forEach(file => {
+        if (!file.type.startsWith('audio/')) return;
+        const blobUrl = URL.createObjectURL(file);
+
+        const card = document.createElement('div');
+        card.className = 'sample-item';
+
+        const top = document.createElement('div');
+        top.className = 'sample-top';
+
+        const title = document.createElement('span');
+        title.className = 'sample-title';
+        title.textContent = file.name.slice(0, 60);
+
+        const chip = document.createElement('span');
+        chip.className = 'chip orange';
+        chip.textContent = 'UPLOAD';
+
+        top.appendChild(title);
+        top.appendChild(chip);
+
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.preload = 'metadata';
+        audio.src = blobUrl;
+        audio.style.width = '100%';
+        audio.style.height = '36px';
+
+        card.appendChild(top);
+        card.appendChild(audio);
+        container.prepend(card);
+      });
+    }
+
+    buildMelodyNotes();
+    renderSequencerUI();
+    renderSampleLibrary();
+    loadSession();
   </script>
 </body>
 </html>
