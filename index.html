@@ -1002,6 +1002,9 @@
 
       <div class="user-info-group">
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
+        <button id="btn-vip-code" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem; display: none;" onclick="unlockVipPrompt()">
+          VIP-Code
+        </button>
         <button id="btn-open-login" class="btn btn-cyan" style="padding: 8px 14px; font-size: 0.8rem;" onclick="openAuthModal('login')">
           Anmelden / Registrieren
         </button>
@@ -1426,7 +1429,8 @@
        1. SUPABASE CLOUD-DATENBANK + PERSISTENTER LOGIN
        ========================================================================= */
     const SUPABASE_URL = 'https://zrdturntjcdvazyrrskk.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZHR1cm50amNkdmF6eXJyc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0Njc2NTEsImV4cCI6MjExMTA0MzY1MX0.-mhnNpMM096PZeo-Xxf0zrjycnCyP0V9sKLjMExIofI';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZHR1cm50amNkdmF6eXJyc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0Njc2NTEsImV4cCI6MjExMTA0MzY1MX0.-mhnNpMM096PZeo-Xxf0zrjycnCyP0V9sKLjMExIofI';
+
     const STORAGE_SESSION_KEY = 'sventekk_cloud_session_v1';
     const STORAGE_QUOTA_KEY = 'sventekk_device_quota_v2';
     const FREE_CREDITS_MAX = 5;
@@ -1523,15 +1527,21 @@
 
     async function sbUpdateUser(username, patch) {
       const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}`;
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify(patch)
       });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+      return await res.json();
     }
 
     /* FEEDBACK FUNKTIONEN */
@@ -1709,6 +1719,7 @@
       const nameEl = document.getElementById('ui-username');
       const timerEl = document.getElementById('ui-reset-timer');
       const badgeEl = document.getElementById('ui-credits-badge');
+      const vipCodeBtn = document.getElementById('btn-vip-code');
       const loginBtn = document.getElementById('btn-open-login');
       const logoutBtn = document.getElementById('btn-logout');
       const adminPanel = document.getElementById('vip-admin-panel');
@@ -1720,6 +1731,7 @@
         timerEl.innerText = 'Jetzt kostenlos anmelden für 5 Gratis-.WAV Exporte / 24h';
         badgeEl.innerText = 'LOGIN NÖTIG';
         badgeEl.className = 'credit-badge empty';
+        vipCodeBtn.style.display = 'none';
         loginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
         adminPanel.style.display = 'none';
@@ -1729,6 +1741,7 @@
 
       avatarEl.innerText = currentUser.username.charAt(0).toUpperCase();
       nameEl.innerText = currentUser.username + (currentUser.is_vip ? ' ★ VIP' : '');
+      vipCodeBtn.style.display = currentUser.is_vip ? 'none' : 'inline-block';
       loginBtn.style.display = 'none';
       logoutBtn.style.display = 'inline-block';
       if (fbUserHint) fbUserHint.innerText = `Wird gesendet als: ${currentUser.username}`;
@@ -1877,15 +1890,21 @@
       }
       const code = prompt('Gib deinen SVENTEKK Creator / VIP-Code ein:');
       if (!code) return;
-      const hash = await sha256Hex(code.trim());
-      if (hash === VIP_CODE_HASH) {
-        currentUser.is_vip = true;
-        await sbUpdateUser(currentUser.username, { is_vip: true });
-        closeLimitModal();
-        updateAccountUI();
-        setStatus('VIP UNLIMITED AKTIVIERT!');
-      } else {
-        alert('Ungültiger VIP-Code.');
+      try {
+        const hash = await sha256Hex(code.trim());
+        if (hash === VIP_CODE_HASH) {
+          await sbUpdateUser(currentUser.username, { is_vip: true, credits_used: 0 });
+          currentUser.is_vip = true;
+          currentUser.credits_used = 0;
+          closeLimitModal();
+          updateAccountUI();
+          loadAdminData();
+          setStatus('VIP UNLIMITED AKTIVIERT!');
+        } else {
+          alert('Ungültiger VIP-Code.');
+        }
+      } catch (e) {
+        alert('Fehler beim VIP-Upgrade: ' + e.message);
       }
     }
 
