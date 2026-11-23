@@ -197,17 +197,19 @@
       font-family: monospace;
     }
 
-    .form-field input {
+    .form-field input, .form-field textarea {
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 9px;
       padding: 11px 12px;
       color: var(--text-main);
-      font-size: 16px;
+      font-size: 15px;
+      font-family: inherit;
       outline: none;
+      resize: vertical;
     }
 
-    .form-field input:focus {
+    .form-field input:focus, .form-field textarea:focus {
       border-color: var(--cyan);
     }
 
@@ -257,6 +259,16 @@
       padding: 5px 12px;
       border-radius: 999px;
       margin-bottom: 12px;
+    }
+
+    .version-tag {
+      background: rgba(255, 85, 0, 0.18);
+      border: 1px solid rgba(255, 85, 0, 0.45);
+      color: #ff945e;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.72rem;
     }
 
     .live-dot {
@@ -758,6 +770,40 @@
       padding: 16px;
     }
 
+    /* FEEDBACK BOX */
+    .rating-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .rate-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .rate-btn.active {
+      background: rgba(0, 240, 255, 0.16);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .feedback-status {
+      font-size: 0.84rem;
+      margin-top: 10px;
+      font-family: monospace;
+      min-height: 20px;
+    }
+
     /* VIP ADMIN LOGINS TABLE */
     .admin-table {
       width: 100%;
@@ -785,9 +831,6 @@
       margin-top: 44px;
     }
 
-    /* =========================================================================
-       MOBILE OPTIMIERUNG (SMARTPHONES)
-       ========================================================================= */
     @media (max-width: 767px) {
       body { padding: 10px 10px 44px; }
       .account-topbar { padding: 8px 10px; margin-bottom: 10px; border-radius: 10px; gap: 8px; }
@@ -826,57 +869,6 @@
       .step-btn { height: 28px; font-size: 0.66rem; border-radius: 6px; }
       .sample-grid, .workflow-grid { grid-template-columns: 1fr; gap: 10px; }
       .modal-card { padding: 18px 16px; }
-    }
-
-    @media (max-width: 960px) and (max-height: 540px) and (orientation: landscape) {
-      body { padding: 8px 12px 30px; }
-      .account-topbar { padding: 6px 12px; margin-bottom: 8px; border-radius: 10px; }
-      .user-avatar { width: 24px; height: 24px; font-size: 0.72rem; }
-      .credit-badge { font-size: 0.7rem; padding: 3px 7px; }
-      .timer-text { font-size: 0.68rem; }
-      .hero-bar { grid-template-columns: 1.2fr 1fr; padding: 12px 14px; gap: 12px; margin-bottom: 14px; border-radius: 12px; }
-      .pill-badge { font-size: 0.62rem; padding: 2px 8px; margin-bottom: 4px; }
-      h1 { font-size: 1.2rem; margin-bottom: 3px; }
-      .hero-desc { font-size: 0.72rem; line-height: 1.3; }
-      .studio-status-box { padding: 8px 10px; gap: 6px; }
-      .status-top { font-size: 0.66rem; }
-      .status-display { padding: 6px 8px; }
-      #studio-status-text { font-size: 0.72rem; }
-      .bpm-readout { font-size: 0.9rem; }
-      .nav-pill { padding: 5px 8px; font-size: 0.7rem; }
-      .section-head { margin: 14px 0 8px; }
-      .section-title { font-size: 0.9rem; }
-      .modules-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .synth-card { padding: 10px 12px; border-radius: 12px; }
-      .synth-card:hover { transform: none; }
-      .card-top { margin-bottom: 3px; }
-      .card-top h3 { font-size: 0.92rem; }
-      .chip { font-size: 0.64rem; padding: 2px 7px; }
-      .card-sub { font-size: 0.7rem; margin-bottom: 7px; line-height: 1.25; }
-      .style-pills { gap: 4px; margin-bottom: 8px; }
-      .style-btn { padding: 4px 3px; font-size: 0.65rem; border-radius: 6px; }
-      .select-row { gap: 6px; margin-bottom: 7px; }
-      .select-group span { font-size: 0.65rem; }
-      select { padding: 4px 6px; font-size: 0.72rem; }
-      .sliders { gap: 5px; margin-bottom: 8px; }
-      .slider-item label { font-size: 0.7rem; margin-bottom: 2px; }
-      .val-pill { font-size: 0.66rem; padding: 1px 5px; }
-      input[type="range"] { height: 4px; }
-      input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; }
-      .actions { gap: 5px; }
-      .btn { padding: 6px 8px; font-size: 0.72rem; border-radius: 7px; }
-      .panel-box { padding: 12px; border-radius: 12px; }
-      .seq-header { margin-bottom: 10px; padding-bottom: 8px; gap: 8px; }
-      .seq-header h3 { font-size: 0.92rem; }
-      .seq-row { grid-template-columns: 145px 1fr; gap: 8px; margin-bottom: 6px; }
-      .seq-track-controls { padding: 4px 6px; }
-      .seq-label { font-size: 0.7rem; }
-      .voice-btn { font-size: 0.62rem; padding: 2px 5px; }
-      .seq-steps { grid-template-columns: repeat(16, 1fr); gap: 3px; }
-      .step-btn { height: 26px; font-size: 0.62rem; border-radius: 5px; }
-      .modal-card { padding: 14px 16px; max-width: 460px; }
-      .form-field { margin-bottom: 8px; }
-      .form-field input { padding: 7px 10px; font-size: 14px; }
     }
   </style>
 </head>
@@ -921,6 +913,27 @@
     </div>
   </div>
 
+  <!-- VIP CODE MODAL -->
+  <div id="vip-modal" class="modal-backdrop">
+    <div class="modal-card" style="border-color: rgba(168, 85, 247, 0.5);">
+      <button class="modal-close" onclick="closeVipModal()">&times;</button>
+      <div class="pill-badge" style="color: #d8b4fe; border-color: rgba(168, 85, 247, 0.45);">VIP UNLOCK</div>
+      <h2 style="font-size: 1.35rem; margin-bottom: 6px;">VIP-Status aktivieren</h2>
+      <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 14px;">
+        Gib deinen VIP-Code ein für unbegrenzte .WAV-Exporte und Zugriff auf das VIP-Panel.
+      </p>
+      <div class="form-field">
+        <label>VIP-CODE</label>
+        <input type="password" id="vip-code-input" maxlength="40" placeholder="VIP-Code eingeben...">
+      </div>
+      <div id="vip-modal-msg" class="auth-msg"></div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-ghost" onclick="closeVipModal()">Abbrechen</button>
+        <button type="button" id="btn-vip-submit" class="btn btn-purple" style="flex: 1;" onclick="submitVipCode()">VIP freischalten</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LIMIT ERREICHT (24H COOLDOWN) MODAL -->
   <div id="limit-modal" class="modal-backdrop">
     <div class="modal-card" style="border-color: rgba(255, 85, 0, 0.45); text-align: center;">
@@ -938,7 +951,7 @@
 
       <div style="display: flex; gap: 8px;">
         <button class="btn btn-ghost" onclick="closeLimitModal()">Okay</button>
-        <button class="btn btn-purple" style="width: auto; flex: 1;" onclick="unlockVipPrompt()">VIP-Code eingeben</button>
+        <button class="btn btn-purple" style="width: auto; flex: 1;" onclick="openVipModal()">VIP-Code eingeben</button>
       </div>
     </div>
   </div>
@@ -956,6 +969,9 @@
 
       <div class="user-info-group">
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
+        <button id="btn-vip-code" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem;" onclick="openVipModal()">
+          VIP-Code
+        </button>
         <button id="btn-open-login" class="btn btn-cyan" style="padding: 8px 14px; font-size: 0.8rem;" onclick="openAuthModal('login')">
           Anmelden / Registrieren
         </button>
@@ -968,7 +984,10 @@
     <!-- HEADER -->
     <header class="hero-bar">
       <div>
-        <div class="pill-badge"><span class="live-dot"></span> SVENTEKK AUDIO LAB // V3.9 CLOUD</div>
+        <div class="pill-badge">
+          <span class="live-dot"></span> SVENTEKK AUDIO LAB
+          <span class="version-tag" id="header-version-badge">VERSION 0.1</span>
+        </div>
         <h1>Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio</h1>
         <p class="hero-desc">
           6-in-1 Hard-Dance Kick Engine (Soft, Hard, Industrial, Gabber, Schranz &amp; Hard Techno),
@@ -1256,6 +1275,7 @@
       <div id="sample-library-list" class="sample-grid"></div>
     </div>
 
+    <!-- 04: WORKFLOW -->
     <div class="section-head">
       <h2 class="section-title"><span class="section-num">04</span> Electribe 2 &amp; DAW Export</h2>
     </div>
@@ -1275,14 +1295,49 @@
       </div>
     </div>
 
+    <!-- 05: FEEDBACK KASTEN -->
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-num">05</span> Feedback &amp; Ideen-Kasten</h2>
+      <span class="chip" id="feedback-version-chip">V 0.1</span>
+    </div>
+
+    <div class="panel-box">
+      <p style="font-size: 0.88rem; color: var(--text-dim); margin-bottom: 14px;">
+        Wie knallt der Sound? Schreib deine Meinung, Bug-Meldungen oder Wünsche für das nächste Update direkt ins Studio:
+      </p>
+
+      <div class="form-field">
+        <label>BEWERTUNG</label>
+        <div class="rating-row" id="rating-buttons">
+          <button type="button" class="rate-btn" data-rate="1" onclick="selectRating(1)">1 ★</button>
+          <button type="button" class="rate-btn" data-rate="2" onclick="selectRating(2)">2 ★</button>
+          <button type="button" class="rate-btn" data-rate="3" onclick="selectRating(3)">3 ★</button>
+          <button type="button" class="rate-btn" data-rate="4" onclick="selectRating(4)">4 ★</button>
+          <button type="button" class="rate-btn active" data-rate="5" onclick="selectRating(5)">5 ★ Abriss!</button>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>DEIN FEEDBACK / WUNSCH-FEATURE</label>
+        <textarea id="feedback-message" rows="3" maxlength="500" placeholder="z.B. Geiler Kick! Bau noch einen Rumble-Effekt oder mehr Presets ein..."></textarea>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <button type="button" id="btn-send-feedback" class="btn btn-cyan" style="max-width: 240px;" onclick="submitFeedback()">Feedback absenden</button>
+        <span class="timer-text" id="feedback-user-hint">Wird gesendet als: Gast</span>
+      </div>
+
+      <div id="feedback-status" class="feedback-status"></div>
+    </div>
+
     <!-- VIP ADMIN PANEL (NUR FÜR VIP-ACCOUNTS SICHTBAR) -->
     <div id="vip-admin-panel" style="display: none;">
       <div class="section-head">
-        <h2 class="section-title"><span class="section-num" style="color: #d8b4fe; background: rgba(168,85,247,0.18);">VIP</span> Cloud-Logins &amp; Nutzerübersicht</h2>
-        <button type="button" class="btn btn-purple" style="flex: 0 0 auto; padding: 8px 14px;" onclick="loadAdminUsers()">↻ Aktualisieren</button>
+        <h2 class="section-title"><span class="section-num" style="color: #d8b4fe; background: rgba(168,85,247,0.18);">VIP</span> Cloud-Logins &amp; Feedback-Eingang</h2>
+        <button type="button" class="btn btn-purple" style="flex: 0 0 auto; padding: 8px 14px;" onclick="loadAdminData()">↻ Aktualisieren</button>
       </div>
-      <div class="panel-box" style="overflow-x: auto;">
-        <p style="font-size: 0.84rem; color: var(--text-dim);">Live-Daten aus deiner Supabase-Tabelle <code>studio_users</code>:</p>
+      <div class="panel-box" style="overflow-x: auto; margin-bottom: 18px;">
+        <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Registrierte Accounts (<code>studio_users</code>)</h3>
         <table class="admin-table">
           <thead>
             <tr>
@@ -1297,28 +1352,61 @@
           </tbody>
         </table>
       </div>
+
+      <div class="panel-box" style="overflow-x: auto;">
+        <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Eingegangenes Feedback (<code>studio_feedback</code>)</h3>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Rating</th>
+              <th>Version</th>
+              <th>Nachricht</th>
+              <th>Datum</th>
+            </tr>
+          </thead>
+          <tbody id="admin-feedback-tbody">
+            <tr><td colspan="5">Lade Feedback...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <footer>
-      SVENTEKK Audio Lab &middot; Cloud-Sync Web Audio Synthesizer
+      SVENTEKK Audio Lab &middot; <strong id="footer-version-text">Version 0.1</strong> &middot; Cloud-Sync Web Audio Synthesizer
     </footer>
   </div>
 
   <script>
     /* =========================================================================
-       1. SUPABASE CLOUD-DATENBANK + PERSISTENTER LOGIN
+       0. APP-VERSION
+       ========================================================================= */
+    const APP_VERSION = '0.1';
+
+    function applyVersionTags() {
+      const hb = document.getElementById('header-version-badge');
+      const fc = document.getElementById('feedback-version-chip');
+      const ft = document.getElementById('footer-version-text');
+      if (hb) hb.innerText = `VERSION ${APP_VERSION}`;
+      if (fc) fc.innerText = `V ${APP_VERSION}`;
+      if (ft) ft.innerText = `Version ${APP_VERSION}`;
+    }
+
+    /* =========================================================================
+       1. SUPABASE CLOUD-DATENBANK + PERSISTENTER LOGIN + VIP
        ========================================================================= */
     const SUPABASE_URL = 'https://zrdturntjcdvazyrrskk.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_5ai7Pl79GFVj1EUCTfacOw_0OxsrgaK';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZHR1cm50amNkdmF6eXJyc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0Njc2NTEsImV4cCI6MjExMTA0MzY1MX0.-mhnNpMM096PZeo-Xxf0zrjycnCyP0V9sKLjMExIofI';
 
     const STORAGE_SESSION_KEY = 'sventekk_cloud_session_v1';
     const STORAGE_QUOTA_KEY = 'sventekk_device_quota_v2';
     const FREE_CREDITS_MAX = 5;
     const RESET_WINDOW_MS = 24 * 60 * 60 * 1000;
-    const VIP_CODE_HASH = 'eb7189dc6b3d6d53fb826658aa968c083287f61baee3d69386bf5ab883230e8a';
+    const VIP_CODE = 'SVENTEKK2026VIP';
 
     let authMode = 'login';
     let currentUser = null;
+    let selectedRating = 5;
 
     async function sha256Hex(text) {
       const encoder = new TextEncoder();
@@ -1367,7 +1455,6 @@
       localStorage.setItem(STORAGE_QUOTA_KEY, JSON.stringify(q));
     }
 
-    /* Supabase REST Helper */
     async function sbFetchUser(username) {
       const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}&select=*`;
       const res = await fetch(url, {
@@ -1406,50 +1493,132 @@
 
     async function sbUpdateUser(username, patch) {
       const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}`;
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify(patch)
       });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+      const rows = await res.json();
+      return rows[0] || null;
     }
 
-    async function loadAdminUsers() {
-      if (!currentUser || !currentUser.is_vip) return;
-      const tbody = document.getElementById('admin-users-tbody');
-      tbody.innerHTML = '<tr><td colspan="4">Lade Logins aus Supabase...</td></tr>';
+    function selectRating(stars) {
+      selectedRating = stars;
+      document.querySelectorAll('#rating-buttons .rate-btn').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.dataset.rate) === stars);
+      });
+    }
+
+    async function submitFeedback() {
+      const msgEl = document.getElementById('feedback-message');
+      const statusEl = document.getElementById('feedback-status');
+      const btn = document.getElementById('btn-send-feedback');
+      const text = msgEl.value.trim();
+
+      if (text.length < 3) {
+        statusEl.style.color = '#fca5a5';
+        statusEl.innerText = 'Bitte schreibe mindestens 3 Zeichen Feedback.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Sende...';
+      statusEl.innerText = '';
+
+      const payload = {
+        username: currentUser ? currentUser.username : 'Gast',
+        rating: selectedRating,
+        message: text,
+        app_version: 'V ' + APP_VERSION,
+        created_at: new Date().toISOString()
+      };
+
       try {
-        const url = `${SUPABASE_URL}/rest/v1/studio_users?select=username,is_vip,credits_used,last_login&order=last_login.desc`;
-        const res = await fetch(url, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/studio_feedback`, {
+          method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const users = await res.json();
-        if (!users.length) {
-          tbody.innerHTML = '<tr><td colspan="4">Noch keine Nutzer registriert.</td></tr>';
-          return;
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errText}`);
         }
-        tbody.innerHTML = '';
-        users.forEach(u => {
-          const tr = document.createElement('tr');
-          const dateStr = u.last_login ? new Date(u.last_login).toLocaleString('de-DE') : '-';
-          tr.innerHTML = `
-            <td><strong>${u.username}</strong></td>
-            <td>${u.is_vip ? '<span style="color:#d8b4fe;">★ VIP</span>' : 'Free'}</td>
-            <td>${u.is_vip ? '∞' : (u.credits_used || 0) + ' / ' + FREE_CREDITS_MAX}</td>
-            <td>${dateStr}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+
+        msgEl.value = '';
+        statusEl.style.color = '#6ee7b7';
+        statusEl.innerText = '✔ Danke! Dein Feedback wurde gespeichert.';
+        if (currentUser && currentUser.is_vip) loadAdminData();
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color:#fca5a5;">Fehler beim Laden: ${e.message}</td></tr>`;
+        statusEl.style.color = '#fca5a5';
+        statusEl.innerText = 'Hinweis: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Feedback absenden';
       }
+    }
+
+    async function loadAdminData() {
+      if (!currentUser || !currentUser.is_vip) return;
+      const tbodyUsers = document.getElementById('admin-users-tbody');
+      const tbodyFb = document.getElementById('admin-feedback-tbody');
+
+      try {
+        const resU = await fetch(`${SUPABASE_URL}/rest/v1/studio_users?select=username,is_vip,credits_used,last_login&order=last_login.desc`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (resU.ok) {
+          const users = await resU.json();
+          tbodyUsers.innerHTML = users.length ? '' : '<tr><td colspan="4">Noch keine Nutzer.</td></tr>';
+          users.forEach(u => {
+            const tr = document.createElement('tr');
+            const dateStr = u.last_login ? new Date(u.last_login).toLocaleString('de-DE') : '-';
+            tr.innerHTML = `
+              <td><strong>${u.username}</strong></td>
+              <td>${u.is_vip ? '<span style="color:#d8b4fe;">★ VIP</span>' : 'Free'}</td>
+              <td>${u.is_vip ? '∞' : (u.credits_used || 0) + ' / ' + FREE_CREDITS_MAX}</td>
+              <td>${dateStr}</td>
+            `;
+            tbodyUsers.appendChild(tr);
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const resF = await fetch(`${SUPABASE_URL}/rest/v1/studio_feedback?select=*&order=created_at.desc&limit=30`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (resF.ok) {
+          const fbs = await resF.json();
+          tbodyFb.innerHTML = fbs.length ? '' : '<tr><td colspan="5">Noch kein Feedback vorhanden.</td></tr>';
+          fbs.forEach(f => {
+            const tr = document.createElement('tr');
+            const dateStr = f.created_at ? new Date(f.created_at).toLocaleString('de-DE') : '-';
+            const safeMsg = String(f.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            tr.innerHTML = `
+              <td><strong>${f.username || 'Gast'}</strong></td>
+              <td>${'★'.repeat(f.rating || 5)}</td>
+              <td>${f.app_version || '-'}</td>
+              <td>${safeMsg}</td>
+              <td>${dateStr}</td>
+            `;
+            tbodyFb.appendChild(tr);
+          });
+        }
+      } catch (e) {}
     }
 
     async function syncUserReset(user) {
@@ -1515,9 +1684,11 @@
       const nameEl = document.getElementById('ui-username');
       const timerEl = document.getElementById('ui-reset-timer');
       const badgeEl = document.getElementById('ui-credits-badge');
+      const vipCodeBtn = document.getElementById('btn-vip-code');
       const loginBtn = document.getElementById('btn-open-login');
       const logoutBtn = document.getElementById('btn-logout');
       const adminPanel = document.getElementById('vip-admin-panel');
+      const fbUserHint = document.getElementById('feedback-user-hint');
 
       if (!currentUser) {
         avatarEl.innerText = '?';
@@ -1525,16 +1696,20 @@
         timerEl.innerText = 'Jetzt kostenlos anmelden für 5 Gratis-.WAV Exporte / 24h';
         badgeEl.innerText = 'LOGIN NÖTIG';
         badgeEl.className = 'credit-badge empty';
+        vipCodeBtn.style.display = 'inline-block';
         loginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
         adminPanel.style.display = 'none';
+        if (fbUserHint) fbUserHint.innerText = 'Wird gesendet als: Gast';
         return;
       }
 
       avatarEl.innerText = currentUser.username.charAt(0).toUpperCase();
       nameEl.innerText = currentUser.username + (currentUser.is_vip ? ' ★ VIP' : '');
+      vipCodeBtn.style.display = currentUser.is_vip ? 'none' : 'inline-block';
       loginBtn.style.display = 'none';
       logoutBtn.style.display = 'inline-block';
+      if (fbUserHint) fbUserHint.innerText = `Wird gesendet als: ${currentUser.username}`;
 
       if (currentUser.is_vip) {
         badgeEl.innerText = '∞ UNLIMITED VIP';
@@ -1542,7 +1717,7 @@
         timerEl.innerText = 'Unbegrenzte Studio-Exporte aktiviert';
         if (adminPanel.style.display === 'none') {
           adminPanel.style.display = 'block';
-          loadAdminUsers();
+          loadAdminData();
         }
         return;
       }
@@ -1574,6 +1749,21 @@
 
     function closeAuthModal() {
       document.getElementById('auth-modal').classList.remove('open');
+    }
+
+    function openVipModal() {
+      closeLimitModal();
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+      document.getElementById('vip-code-input').value = '';
+      document.getElementById('vip-modal-msg').innerText = '';
+      document.getElementById('vip-modal').classList.add('open');
+    }
+
+    function closeVipModal() {
+      document.getElementById('vip-modal').classList.remove('open');
     }
 
     function closeLimitModal() {
@@ -1620,8 +1810,7 @@
             errEl.innerText = 'Dieser Benutzername existiert bereits. Bitte anmelden.';
             return;
           }
-          const vipHash = vipInput ? await sha256Hex(vipInput) : '';
-          const isVip = vipHash === VIP_CODE_HASH;
+          const isVip = vipInput.toUpperCase() === VIP_CODE;
           const dq = getDeviceQuota();
 
           const newUser = {
@@ -1638,7 +1827,7 @@
           currentUser = created;
           closeAuthModal();
           updateAccountUI();
-          setStatus(`WILLKOMMEN ${username.toUpperCase()}!`);
+          setStatus(isVip ? `VIP ACCOUNT ${username.toUpperCase()} AKTIV!` : `WILLKOMMEN ${username.toUpperCase()}!`);
         } else {
           if (!existingUser) {
             errEl.innerText = 'Account nicht gefunden. Bitte zuerst registrieren.';
@@ -1665,31 +1854,57 @@
       }
     }
 
+    async function submitVipCode() {
+      const inputEl = document.getElementById('vip-code-input');
+      const msgEl = document.getElementById('vip-modal-msg');
+      const btn = document.getElementById('btn-vip-submit');
+      const entered = inputEl.value.trim();
+
+      if (!currentUser) {
+        closeVipModal();
+        openAuthModal('login');
+        return;
+      }
+
+      if (entered.toUpperCase() !== VIP_CODE) {
+        msgEl.style.color = '#fca5a5';
+        msgEl.innerText = 'Ungültiger VIP-Code.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Aktiviere...';
+      msgEl.innerText = '';
+
+      try {
+        const updated = await sbUpdateUser(currentUser.username, {
+          is_vip: true,
+          credits_used: 0
+        });
+        currentUser = {
+          ...currentUser,
+          ...(updated || {}),
+          is_vip: true,
+          credits_used: 0
+        };
+        closeVipModal();
+        updateAccountUI();
+        await loadAdminData();
+        setStatus('VIP UNLIMITED AKTIVIERT!');
+      } catch (e) {
+        msgEl.style.color = '#fca5a5';
+        msgEl.innerText = 'Fehler beim Speichern: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'VIP freischalten';
+      }
+    }
+
     function logoutUser() {
       clearPersistentSession();
       currentUser = null;
       updateAccountUI();
       setStatus('ABGEMELDET');
-    }
-
-    async function unlockVipPrompt() {
-      if (!currentUser) {
-        closeLimitModal();
-        openAuthModal('login');
-        return;
-      }
-      const code = prompt('Gib deinen SVENTEKK Creator / VIP-Code ein:');
-      if (!code) return;
-      const hash = await sha256Hex(code.trim());
-      if (hash === VIP_CODE_HASH) {
-        currentUser.is_vip = true;
-        await sbUpdateUser(currentUser.username, { is_vip: true });
-        closeLimitModal();
-        updateAccountUI();
-        setStatus('VIP UNLIMITED AKTIVIERT!');
-      } else {
-        alert('Ungültiger VIP-Code.');
-      }
     }
 
     function requireLoginOnly() {
@@ -2001,7 +2216,6 @@
       });
     }
 
-    /* RAVE MELODIEN-GENERATOR */
     const MELODY_SCALES = {
       phrygian: [164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63],
       aminor:   [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00],
@@ -2195,7 +2409,6 @@
       };
     }
 
-    /* GENERATOR ACTIONS (PROBHÖREN KOSTENLOS NACH LOGIN) */
     function playHardtekkKick() {
       if (!requireLoginOnly()) return;
       const ctx = getAudioCtx();
@@ -2246,7 +2459,6 @@
       setStatus('PLAYING: RAVE MELODY HOOK');
     }
 
-    /* WAV EXPORT (VERBRAUCHT 1 EXPORT-CREDIT) */
     function audioBufferToWav(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
@@ -2331,7 +2543,6 @@
       });
     }
 
-    /* SEQUENZER */
     function renderSequencerUI() {
       const container = document.getElementById('sequencer-rows');
       container.innerHTML = '';
@@ -2471,7 +2682,6 @@
       renderSequencerUI();
     }
 
-    /* SAMPLE LIBRARY */
     function renderSampleLibrary() {
       const container = document.getElementById('sample-library-list');
       container.innerHTML = '';
@@ -2572,6 +2782,7 @@
       });
     }
 
+    applyVersionTags();
     buildMelodyNotes();
     renderSequencerUI();
     renderSampleLibrary();
