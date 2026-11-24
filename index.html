@@ -42,7 +42,7 @@
       </div>
 
       <div class="security-note">
-        🔒 <strong>Cloud-Sync:</strong> Passwörter werden per SHA-256 gehasht. Bei Bedarf kannst du oben „Dev-Modus (Offline)“ aktivieren.
+        🔒 <strong>Cloud-Sync:</strong> Passwörter werden per SHA-256 gehasht.
       </div>
 
       <div id="auth-error" class="auth-msg"></div>
@@ -56,7 +56,7 @@
       <div class="pill-badge" style="color: #d8b4fe; border-color: rgba(168, 85, 247, 0.45);">RANG AKTIVIEREN</div>
       <h2 style="font-size: 1.35rem; margin-bottom: 6px;">Zugangscode eingeben</h2>
       <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 14px;">
-        Schalte deinen Account für VIP, Tester oder Entwickler frei.
+        Schalte deinen Account für VIP oder Tester frei.
       </p>
       <div class="form-field">
         <label>CODE</label>
@@ -96,7 +96,7 @@
        ===================================================================== -->
   <div class="app-shell">
 
-    <!-- ACCOUNT & DEV BAR -->
+    <!-- ACCOUNT BAR -->
     <div class="account-topbar">
       <div class="user-info-group">
         <div class="user-avatar" id="ui-avatar">?</div>
@@ -111,9 +111,6 @@
 
       <div class="user-info-group">
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
-        <button type="button" id="btn-dev-offline" class="btn btn-ghost" style="padding: 8px 12px; font-size: 0.8rem;" onclick="toggleLocalDevMode()">
-          Dev-Modus (Offline)
-        </button>
         <button type="button" id="btn-vip-code" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem;" onclick="openVipModal()">
           Rang-Code
         </button>

@@ -8,21 +8,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const STORAGE_SESSION_KEY = 'sventekk_cloud_session_v1';
 const STORAGE_QUOTA_KEY = 'sventekk_device_quota_v2';
-const STORAGE_DEV_KEY = 'sventekk_local_dev_mode';
 
 const FREE_CREDITS_MAX = 5;
 const RESET_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const ROLE_CODES = {
   'SVENTEKK2026VIP': 'vip',
-  'SVENTEKKTESTER': 'tester',
-  'SVENTEKKDEV2026': 'entwickler'
+  'SVENTEKKTESTER': 'tester'
 };
 
 let authMode = 'login';
 let currentUser = null;
 let selectedRating = 5;
-let localDevMode = false;
 
 /* =========================================================================
    2. HILFSFUNKTIONEN & SESSION
@@ -78,12 +75,6 @@ function getPersistentSession() {
   if (ls) return ls;
   const match = document.cookie.match(new RegExp('(?:^|; )' + STORAGE_SESSION_KEY + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
-}
-
-function isLocalEnvironment() {
-  const proto = window.location.protocol;
-  const host = window.location.hostname;
-  return proto === 'file:' || host === 'localhost' || host === '127.0.0.1';
 }
 
 function saveDeviceQuota(q) {
@@ -156,15 +147,15 @@ async function sbUpdateUser(username, patch) {
 }
 
 /* =========================================================================
-   4. RÄNGE, LOGIN & LOKALER DEV-MODUS
+   4. RÄNGE & LOGIN (NUR ÜBER SUPABASE-ACCOUNT)
    ========================================================================= */
 function canEditUserRoles(user) {
-  if (localDevMode) return true;
+  if (!user) return false;
   return getEffectiveRole(user) === 'entwickler';
 }
 
 function canViewAdminPanel(user) {
-  if (localDevMode) return true;
+  if (!user) return false;
   const r = getEffectiveRole(user);
   return r === 'vip' || r === 'entwickler';
 }
@@ -204,19 +195,6 @@ function consumeExportCredit() {
   return true;
 }
 
-function enableLocalDevSession() {
-  localDevMode = true;
-  localStorage.setItem(STORAGE_DEV_KEY, '1');
-  currentUser = {
-    username: 'sventekk_dev',
-    role: 'entwickler',
-    is_vip: true,
-    credits_used: 0,
-    window_start: Date.now()
-  };
-  updateAccountUI();
-}
-
 function getEffectiveRole(user) {
   if (!user) return 'free';
   if (user.role) return user.role;
@@ -224,17 +202,14 @@ function getEffectiveRole(user) {
 }
 
 function hasUnlimitedExports(user) {
-  if (localDevMode) return true;
+  if (!user) return false;
   const r = getEffectiveRole(user);
   return r === 'vip' || r === 'tester' || r === 'entwickler';
 }
 
 async function loadSession() {
-  const devFlag = localStorage.getItem(STORAGE_DEV_KEY);
-  if (devFlag === '1' || (isLocalEnvironment() && devFlag !== '0')) {
-    enableLocalDevSession();
-    return;
-  }
+  localStorage.removeItem('sventekk_local_dev_mode');
+  sessionStorage.removeItem('sventekk_owner_dev_v1');
 
   const savedName = getPersistentSession();
   if (!savedName) {
@@ -259,8 +234,6 @@ async function loadSession() {
 
 function logoutUser() {
   clearPersistentSession();
-  localDevMode = false;
-  localStorage.setItem(STORAGE_DEV_KEY, '0');
   currentUser = null;
   updateAccountUI();
   setStatus('ABGEMELDET');
@@ -281,7 +254,6 @@ function openVipModal() {
 }
 
 function requireLoginOnly() {
-  if (localDevMode) return true;
   if (!currentUser) {
     openAuthModal('register');
     setStatus('BITTE ZUERST ANMELDEN');
@@ -335,8 +307,6 @@ async function submitAuth() {
       };
 
       const created = await sbCreateUser(newUser);
-      localDevMode = false;
-      localStorage.setItem(STORAGE_DEV_KEY, '0');
       setPersistentSession(username);
       currentUser = created;
       closeAuthModal();
@@ -352,8 +322,6 @@ async function submitAuth() {
         return;
       }
       await sbUpdateUser(username, { last_login: new Date().toISOString() });
-      localDevMode = false;
-      localStorage.setItem(STORAGE_DEV_KEY, '0');
       setPersistentSession(username);
       currentUser = await syncUserReset(existingUser);
       closeAuthModal();
@@ -361,7 +329,7 @@ async function submitAuth() {
       setStatus(`EINGELOGGT ALS ${username.toUpperCase()}`);
     }
   } catch (e) {
-    errEl.innerText = 'Cloud-Fehler: ' + e.message + ' — Tipp: Nutze oben „Dev-Modus (Offline)“ zum lokalen Arbeiten.';
+    errEl.innerText = 'Cloud-Fehler: ' + e.message;
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerText = 'Weiter ins Studio';
@@ -450,47 +418,27 @@ async function syncUserReset(user) {
   return user;
 }
 
-function toggleLocalDevMode() {
-  if (localDevMode) {
-    localDevMode = false;
-    localStorage.setItem(STORAGE_DEV_KEY, '0');
-    currentUser = null;
-    loadSession();
-    setStatus('CLOUD-MODUS AKTIV');
-  } else {
-    enableLocalDevSession();
-    setStatus('DEV-MODUS AKTIV (OFFLINE OHNE CLOUD)');
-  }
-}
-
 function updateAccountUI() {
   const avatarEl = document.getElementById('ui-avatar');
   const nameEl = document.getElementById('ui-username');
   const roleBadgeEl = document.getElementById('ui-role-badge');
   const timerEl = document.getElementById('ui-reset-timer');
   const badgeEl = document.getElementById('ui-credits-badge');
-  const devBtn = document.getElementById('btn-dev-offline');
   const vipCodeBtn = document.getElementById('btn-vip-code');
   const loginBtn = document.getElementById('btn-open-login');
   const logoutBtn = document.getElementById('btn-logout');
   const adminPanel = document.getElementById('vip-admin-panel');
   const fbUserHint = document.getElementById('feedback-user-hint');
 
-  if (devBtn) {
-    devBtn.innerText = localDevMode ? 'Dev-Modus: AN' : 'Dev-Modus (Offline)';
-    devBtn.style.borderColor = localDevMode ? 'var(--orange)' : 'var(--border)';
-    devBtn.style.color = localDevMode ? '#ff9e6d' : 'var(--text-main)';
-  }
-
   if (!currentUser) {
     avatarEl.innerText = '?';
     nameEl.innerText = 'Nicht angemeldet (Gast)';
     roleBadgeEl.innerText = 'GAST';
     roleBadgeEl.className = 'role-tag role-free';
-    timerEl.innerText = 'Anmelden für 5 Gratis-.WAV Exporte / 24h (oder Dev-Modus nutzen)';
+    timerEl.innerText = 'Anmelden für 5 Gratis-.WAV Exporte / 24h';
     badgeEl.innerText = 'LOGIN NÖTIG';
     badgeEl.className = 'credit-badge empty';
-    vipCodeBtn.style.display = 'inline-block';
+    vipCodeBtn.style.display = 'none';
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
     adminPanel.style.display = 'none';
@@ -504,9 +452,9 @@ function updateAccountUI() {
   roleBadgeEl.innerText = role.toUpperCase();
   roleBadgeEl.className = `role-tag role-${role}`;
 
-  vipCodeBtn.style.display = role === 'entwickler' || localDevMode ? 'none' : 'inline-block';
+  vipCodeBtn.style.display = role === 'entwickler' ? 'none' : 'inline-block';
   loginBtn.style.display = 'none';
-  logoutBtn.style.display = localDevMode ? 'none' : 'inline-block';
+  logoutBtn.style.display = 'inline-block';
   if (fbUserHint) fbUserHint.innerText = `Wird gesendet als: ${currentUser.username} (${role})`;
 
   if (canViewAdminPanel(currentUser)) {
@@ -521,9 +469,7 @@ function updateAccountUI() {
   if (hasUnlimitedExports(currentUser)) {
     badgeEl.innerText = `∞ ${role.toUpperCase()}`;
     badgeEl.className = 'credit-badge vip';
-    timerEl.innerText = localDevMode
-      ? 'Lokaler Entwickler-Modus aktiv (kein Cloud-Login erforderlich)'
-      : `Rang "${role.toUpperCase()}" aktiv – unbegrenzte Studio-Exporte`;
+    timerEl.innerText = `Rang "${role.toUpperCase()}" aktiv – unbegrenzte Studio-Exporte`;
     return;
   }
 

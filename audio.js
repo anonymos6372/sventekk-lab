@@ -1165,12 +1165,7 @@ function toggleSequencer() {
   }
 }
 
-applyVersionTags();
-initAllControlBindings();
-buildMelodyNotes();
-renderSequencerUI();
-renderSampleLibrary();
-loadSession();/* =========================================================================
+/* =========================================================================
    6. OFFENE FIXES / NOTIZBLOCK (LOKAL)
    ========================================================================= */
 const FIX_NOTES_STORAGE_KEY = 'sventekk_open_fixes_v1';
@@ -1225,4 +1220,10 @@ function clearFixNotes() {
   }
 }
 
+applyVersionTags();
+initAllControlBindings();
+buildMelodyNotes();
+renderSequencerUI();
+renderSampleLibrary();
 initFixNotesBox();
+loadSession();
