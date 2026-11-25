@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVENTEKK // KORG ELECTRIBE 2 LIVE</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;600;800&family=Black+Ops+One&family=Audiowide&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    :root {
+      --accent: #ff1e42;
+      --bg1: #07070b;
+      --bg2: #190712;
+      --bg-angle: 135deg;
+      --bg-glow: 0.35;
+      --panel: rgba(11, 12, 18, 0.88);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #f4f4f8;
+      --muted: #a2a5bc;
+      --control-bg: #141622;
+      --track-bg: #26293b;
+    }
+
+    body {
+      background: var(--bg1);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #bg-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: var(--bg1);
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas#visualizer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+    }
+
+    #strobe-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 2;
+      mix-blend-mode: screen;
+    }
+
+    #center-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 3;
+      text-align: center;
+      padding: 0 24px;
+    }
+
+    #artist-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2.4rem, 6.6vw, 5.8rem);
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow: 0 0 18px var(--accent), 0 0 42px color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+
+    #sub-tag {
+      margin-top: 10px;
+      font-size: clamp(0.7rem, 1.2vw, 0.88rem);
+      letter-spacing: 0.36em;
+      color: rgba(255, 255, 255, 0.68);
+      text-transform: uppercase;
+    }
+
+    #pad-callout {
+      margin-top: 18px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      background: rgba(15, 17, 26, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #e2e8f0;
+      opacity: 0;
+      transform: translateY(6px) scale(0.95);
+      transition: opacity 0.1s ease, transform 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    #pad-callout.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #pad-callout.hidden-callout,
+    body.hud-hidden #pad-callout {
+      display: none !important;
+    }
+
+    #pad-grid {
+      position: fixed;
+      left: 50%;
+      bottom: 62px;
+      transform: translateX(-50%);
+      z-index: 9;
+      display: grid;
+      grid-template-columns: repeat(16, 30px);
+      gap: 4px;
+      background: rgba(11, 12, 18, 0.92);
+      border: 1px solid var(--border);
+      padding: 5px 8px;
+      border-radius: 9px;
+      backdrop-filter: blur(12px);
+    }
+
+    #pad-grid.hidden-grid,
+    body.hud-hidden #pad-grid {
+      display: none;
+    }
+
+    .pad-cell {
+      height: 22px;
+      border-radius: 4px;
+      background: #191c2b;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #c4c8e0;
+      cursor: pointer;
+      transition: transform 0.06s ease;
+    }
+
+    .pad-cell.triggered {
+      transform: translateY(-2px) scale(1.06);
+      border-color: #ffffff;
+    }
+
+    .pad-cell:active {
+      transform: scale(0.92);
+    }
+
+    .pad-routing-list {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+
+    .pad-route-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 4px;
+      border-radius: 6px;
+      background: #11131d;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      min-width: 40px;
+      transition: border-color 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .pad-route-card.triggered {
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+    }
+
+    .pad-route-num {
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: #cbd5e1;
+    }
+
+    .pad-route-btns {
+      display: flex;
+      gap: 2px;
+    }
+
+    .mini-flag {
+      padding: 1px 4px;
+      font-size: 0.55rem;
+      font-weight: 800;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: #1a1d2d;
+      color: #7c819c;
+      cursor: pointer;
+      line-height: 1.25;
+    }
+
+    .mini-flag.on-line {
+      background: rgba(56, 189, 248, 0.24);
+      border-color: #38bdf8;
+      color: #7dd3fc;
+    }
+
+    .mini-flag.on-shake {
+      background: rgba(255, 30, 66, 0.28);
+      border-color: #ff1e42;
+      color: #fda4af;
+    }
+
+    .mini-flag.on-rand {
+      background: rgba(250, 204, 21, 0.24);
+      border-color: #facc15;
+      color: #fef08a;
+    }
+
+    .hud {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+      padding: 8px 14px;
+      border-radius: 12px;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .hud-top { top: 12px; }
+    .hud-bottom { bottom: 10px; }
+
+    body.hud-hidden .hud {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+    }
+    body.hud-hidden .hud-bottom {
+      transform: translateY(10px);
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 2px;
+      background: var(--control-bg);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    .tab-panel {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .status-pill {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.67rem;
+      font-weight: 700;
+      background: var(--control-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+    }
+
+    .status-pill.connected {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .status-pill.pad-hot {
+      color: #ffffff;
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    button, select, input[type="text"] {
+      background: var(--control-bg);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 0.72rem;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select option {
+      background: #12141e;
+      color: #f4f4f8;
+    }
+
+    input[type="text"] { cursor: text; }
+    button:hover, select:hover { border-color: rgba(255, 255, 255, 0.36); }
+
+    button.active-toggle {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.42);
+      color: #fff;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    label {
+      font-size: 0.66rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    label span.val {
+      color: var(--text);
+      min-width: 28px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 64px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--track-bg);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      cursor: pointer;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--track-bg);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+    }
+
+    .swatches {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+    }
+    .swatch:hover { transform: scale(1.15); }
+
+    input[type="color"] {
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      background: var(--control-bg);
+      padding: 1px;
+      cursor: pointer;
+    }
+
+    a.back-btn {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 7px;
+      background: var(--control-bg);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+    a.back-btn:hover { border-color: rgba(255, 255, 255, 0.36); }
+  </style>
+</head>
+<body>
+
+  <div id="bg-layer"></div>
+
+  <div id="stage">
+    <canvas id="visualizer"></canvas>
+    <div id="strobe-layer"></div>
+
+    <div id="center-overlay">
+      <div id="artist-title">SVENTEKK</div>
+      <div id="sub-tag">KORG ELECTRIBE 2 // LIVE</div>
+      <div id="pad-callout">PAD 01 · LINES + SHAKE</div>
+    </div>
+  </div>
+
+  <!-- 16-Pad Streifen -->
+  <div id="pad-grid"></div>
+
+  <!-- Top Bar -->
+  <div class="hud hud-top">
+    <div class="group">
+      <a href="index.html" class="back-btn">← Studio</a>
+      <button id="btn-midi" class="primary">KORG CONNECT</button>
+      <select id="select-padmap" title="Wie Korg-Pads erkannt werden">
+        <option value="auto">PAD-MAP: AUTO</option>
+        <option value="channel">CHANNEL 1-16</option>
+        <option value="note">NOTE-SCALE</option>
+      </select>
+      <span id="midi-status" class="status-pill">MIDI: OFF</span>
+      <span id="pad-indicator" class="status-pill">PAD --</span>
+      <span id="midi-debug" class="status-pill">CH -- | NOTE --</span>
+      <span id="bpm-display" class="status-pill">-- BPM</span>
+    </div>
+
+    <div class="group">
+      <button id="btn-test-pad">TEST [1-9 / Q-U]</button>
+      <button id="btn-fullscreen">FULLSCREEN</button>
+      <button id="btn-hide-hud">HUD [H]</button>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="hud hud-bottom">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="wave">WAVE</button>
+      <button class="tab-btn" data-tab="color">COLOR & BG</button>
+      <button class="tab-btn" data-tab="text">TEXT & PADS</button>
+      <button class="tab-btn" data-tab="fx">FX & PRESETS</button>
+    </div>
+
+    <!-- Tab 1: Wave-Module & Parameter -->
+    <div class="tab-panel active" id="panel-wave">
+      <label>MODUL:
+        <select id="select-shape">
+          <option value="upward-lines">UPWARD LINES</option>
+          <option value="ribbon">CLEAN RIBBON</option>
+          <option value="dual-wave">DUAL SINE</option>
+          <option value="harmonic">HARMONIC WAVE</option>
+          <option value="pulse-arc">PULSE ARC</option>
+          <option value="matrix-bars">MATRIX BARS</option>
+          <option value="zaag">ZAAG STEP</option>
+        </select>
+      </label>
+
+      <label>ANZAHL:
+        <input type="range" id="range-count" min="1" max="16" step="1" value="8" />
+        <span class="val" id="val-count">8</span>
+      </label>
+
+      <label>HÖHE:
+        <input type="range" id="range-height" min="0.2" max="2.5" step="0.1" value="1.3" />
+        <span class="val" id="val-height">1.3</span>
+      </label>
+
+      <label>FREQ:
+        <input type="range" id="range-freq" min="0.5" max="4.0" step="0.1" value="1.5" />
+        <span class="val" id="val-freq">1.5</span>
+      </label>
+
+      <label>DICKE:
+        <input type="range" id="range-width" min="1" max="8" step="0.5" value="2.5" />
+        <span class="val" id="val-width">2.5</span>
+      </label>
+
+      <label>SPREAD:
+        <input type="range" id="range-spread" min="0.2" max="2.5" step="0.1" value="1.0" />
+        <span class="val" id="val-spread">1.0</span>
+      </label>
+
+      <label>SPEED:
+        <input type="range" id="range-speed" min="0.2" max="3.0" step="0.1" value="1.0" />
+        <span class="val" id="val-speed">1.0</span>
+      </label>
+
+      <button id="btn-mirror" class="active-toggle">MIRROR: AN</button>
+    </div>
+
+    <!-- Tab 2: Color & Background -->
+    <div class="tab-panel" id="panel-color">
+      <label>WAVE-FARBE:
+        <select id="select-colormode">
+          <option value="single">SINGLE</option>
+          <option value="pad-mix">16-PAD MIX</option>
+          <option value="duo">DUO (1 + 2)</option>
+          <option value="spectrum">SPECTRUM</option>
+        </select>
+      </label>
+
+      <label>FARBE 1:
+        <div class="swatches">
+          <div class="swatch" style="background:#ff1e42;" data-color="#ff1e42"></div>
+          <div class="swatch" style="background:#00f5d4;" data-color="#00f5d4"></div>
+          <div class="swatch" style="background:#39ff14;" data-color="#39ff14"></div>
+          <div class="swatch" style="background:#ff2a85;" data-color="#ff2a85"></div>
+          <div class="swatch" style="background:#a855f7;" data-color="#a855f7"></div>
+          <div class="swatch" style="background:#facc15;" data-color="#facc15"></div>
+        </div>
+        <input type="color" id="input-color" value="#ff1e42" />
+      </label>
+
+      <label>FARBE 2:
+        <input type="color" id="input-color2" value="#00f5d4" />
+      </label>
+
+      <label>BG-MODUS:
+        <select id="select-bgmode">
+          <option value="solid">NORMAL (SOLID)</option>
+          <option value="gradient">VERLAUF (GRADIENT)</option>
+          <option value="neon">NEON GLOW</option>
+          <option value="pulse">KICK-NEON PULSE</option>
+        </select>
+      </label>
+
+      <label>BG 1:
+        <input type="color" id="input-bg" value="#07070b" />
+      </label>
+
+      <label>BG 2:
+        <input type="color" id="input-bg2" value="#1c0714" />
+      </label>
+
+      <label>WINKEL:
+        <input type="range" id="range-bgangle" min="0" max="360" step="5" value="135" />
+        <span class="val" id="val-bgangle">135°</span>
+      </label>
+
+      <label>BG-GLOW:
+        <input type="range" id="range-bgglow" min="0" max="1" step="0.05" value="0.4" />
+        <span class="val" id="val-bgglow">0.40</span>
+      </label>
+
+      <label>TRAIL:
+        <input type="range" id="range-trail" min="0.1" max="0.85" step="0.02" value="0.34" />
+        <span class="val" id="val-trail">0.34</span>
+      </label>
+
+      <label>BASIS Y:
+        <input type="range" id="range-basey" min="0.3" max="1.0" step="0.01" value="1.00" />
+        <span class="val" id="val-basey">1.00</span>
+      </label>
+    </div>
+
+    <!-- Tab 3: Text & Pro-Pad Routing -->
+    <div class="tab-panel" id="panel-text">
+      <label>NAME:
+        <input type="text" id="input-name" value="SVENTEKK" maxlength="20" style="width:95px;" />
+      </label>
+      <label>FONT:
+        <select id="select-font">
+          <option value="'Orbitron', sans-serif">ORBITRON</option>
+          <option value="'Black Ops One', cursive">STENCIL</option>
+          <option value="'Audiowide', cursive">AUDIOWIDE</option>
+          <option value="'JetBrains Mono', monospace">MONO</option>
+        </select>
+      </label>
+
+      <div class="pad-routing-list" id="pad-routing-list" title="L = Linien bewegen, S = Shake, R = Zufällige Position"></div>
+
+      <button id="btn-preset-kickshake" title="Shake nur auf Pad 1, Linien auf allen Pads">PAD 1 SHAKE</button>
+      <button id="btn-all-rand" title="Zufällige Linie/Zone bei Auslösung ein/aus">RND POS: AUS</button>
+      <button id="btn-callout-toggle" class="active-toggle">PAD-POPUP: AN</button>
+      <button id="btn-pads-toggle" class="active-toggle">16-PADS</button>
+    </div>
+
+    <!-- Tab 4: FX & Presets -->
+    <div class="tab-panel" id="panel-fx">
+      <button id="btn-audio">AUDIO IN</button>
+      <button id="btn-strobe">STROBE: AUS</button>
+      <button id="btn-shake-master" class="active-toggle">SHAKE MASTER: AN</button>
+      <select id="select-preset">
+        <option value="">PRESET...</option>
+        <option value="slot1">SLOT 1</option>
+        <option value="slot2">SLOT 2</option>
+        <option value="slot3">SLOT 3</option>
+      </select>
+      <button id="btn-save-preset">SAVE</button>
+    </div>
+  </div>
+
+  <script>
+    const bgLayer = document.getElementById('bg-layer');
+    const stage = document.getElementById('stage');
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const strobeLayer = document.getElementById('strobe-layer');
+    const padGrid = document.getElementById('pad-grid');
+    const padRoutingList = document.getElementById('pad-routing-list');
+
+    const artistTitle = document.getElementById('artist-title');
+    const subTag = document.getElementById('sub-tag');
+    const padCallout = document.getElementById('pad-callout');
+    const midiStatus = document.getElementById('midi-status');
+    const padIndicator = document.getElementById('pad-indicator');
+    const midiDebug = document.getElementById('midi-debug');
+    const bpmDisplay = document.getElementById('bpm-display');
+
+    const inputName = document.getElementById('input-name');
+    const selectFont = document.getElementById('select-font');
+    const selectShape = document.getElementById('select-shape');
+    const selectColorMode = document.getElementById('select-colormode');
+    const selectBgMode = document.getElementById('select-bgmode');
+    const selectPadMap = document.getElementById('select-padmap');
+
+    const rangeCount = document.getElementById('range-count');
+    const rangeHeight = document.getElementById('range-height');
+    const rangeFreq = document.getElementById('range-freq');
+    const rangeWidth = document.getElementById('range-width');
+    const rangeSpread = document.getElementById('range-spread');
+    const rangeSpeed = document.getElementById('range-speed');
+    const rangeBgAngle = document.getElementById('range-bgangle');
+    const rangeBgGlow = document.getElementById('range-bgglow');
+    const rangeTrail = document.getElementById('range-trail');
+    const rangeBaseY = document.getElementById('range-basey');
+
+    const valCount = document.getElementById('val-count');
+    const valHeight = document.getElementById('val-height');
+    const valFreq = document.getElementById('val-freq');
+    const valWidth = document.getElementById('val-width');
+    const valSpread = document.getElementById('val-spread');
+    const valSpeed = document.getElementById('val-speed');
+    const valBgAngle = document.getElementById('val-bgangle');
+    const valBgGlow = document.getElementById('val-bgglow');
+    const valTrail = document.getElementById('val-trail');
+    const valBaseY = document.getElementById('val-basey');
+
+    const inputColor = document.getElementById('input-color');
+    const inputColor2 = document.getElementById('input-color2');
+    const inputBg = document.getElementById('input-bg');
+    const inputBg2 = document.getElementById('input-bg2');
+    const selectPreset = document.getElementById('select-preset');
+
+    const NEON_PALETTE = [
+      '#ff1e42', '#00f5d4', '#39ff14', '#ff2a85',
+      '#a855f7', '#facc15', '#38bdf8', '#fb923c'
+    ];
+
+    function hexToRgb(hex) {
+      const clean = (hex || '#07070b').replace('#', '');
+      const num = parseInt(clean.padEnd(6, '0').slice(0, 6), 16);
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    }
+
+    let primaryColor = inputColor.value;
+    let secondaryColor = inputColor2.value;
+    let bgColor = inputBg.value;
+    let bgColor2 = inputBg2.value;
+    let rgb1 = hexToRgb(primaryColor);
+    let rgb2 = hexToRgb(secondaryColor);
+    let bgRgb1 = hexToRgb(bgColor);
+    let bgRgb2 = hexToRgb(bgColor2);
+
+    let colorMode = selectColorMode.value;
+    let bgMode = selectBgMode.value;
+    let padMapMode = selectPadMap.value;
+    let bgAngle = parseInt(rangeBgAngle.value, 10);
+    let bgGlow = parseFloat(rangeBgGlow.value);
+
+    let waveCount = parseInt(rangeCount.value, 10);
+    let waveHeight = parseFloat(rangeHeight.value);
+    let freqScale = parseFloat(rangeFreq.value);
+    let lineThickness = parseFloat(rangeWidth.value);
+    let spreadScale = parseFloat(rangeSpread.value);
+    let waveSpeed = parseFloat(rangeSpeed.value);
+    let trailAlpha = parseFloat(rangeTrail.value);
+    let baseLineRatio = parseFloat(rangeBaseY.value);
+    let waveShape = selectShape.value;
+
+    let mirrorEnabled = true;
+    let strobeEnabled = false;
+    let shakeMasterEnabled = true;
+    let calloutEnabled = true;
+    let time = 0;
+    let shakeImpulse = 0;
+    let calloutTimer = null;
+
+    let analyser = null;
+    let audioData = null;
+    let midiAccessInstance = null;
+
+    const channelLastNote = new Map();
+    const noteToPadSlot = new Map();
+    let nextAutoSlot = 0;
+
+    const NUM_PADS = 16;
+    const pads = Array.from({ length: NUM_PADS }, (_, i) => {
+      const col = NEON_PALETTE[i % NEON_PALETTE.length];
+      const homeX = (i + 0.5) / NUM_PADS;
+      return {
+        id: i + 1,
+        energy: 0,
+        hitFlash: 0,
+        linesOn: true,
+        shakeOn: i === 0,
+        randPosOn: false,
+        homeX,
+        centerX: homeX,
+        randSpotX: homeX,
+        phase: i * 0.55,
+        freq: 2.0 + (i % 6) * 0.75,
+        color: col,
+        rgb: hexToRgb(col),
+        el: null,
+        cardEl: null,
+        lineBtn: null,
+        shakeBtn: null,
+        randBtn: null
+      };
+    });
+
+    function syncPadRoutingUI() {
+      pads.forEach((pad) => {
+        if (pad.lineBtn) {
+          pad.lineBtn.classList.toggle('on-line', pad.linesOn);
+          pad.lineBtn.title = `Pad ${pad.id}: Linien ${pad.linesOn ? 'AN' : 'AUS'}`;
+        }
+        if (pad.shakeBtn) {
+          pad.shakeBtn.classList.toggle('on-shake', pad.shakeOn);
+          pad.shakeBtn.title = `Pad ${pad.id}: Shake ${pad.shakeOn ? 'AN' : 'AUS'}`;
+        }
+        if (pad.randBtn) {
+          pad.randBtn.classList.toggle('on-rand', pad.randPosOn);
+          pad.randBtn.title = `Pad ${pad.id}: ${pad.randPosOn ? 'Zufällige Position (RND)' : 'Fester Bereich / Rechte Seite'}`;
+        }
+      });
+
+      const btnAllRand = document.getElementById('btn-all-rand');
+      const anyRand = pads.some((p) => p.randPosOn);
+      btnAllRand.textContent = `RND POS: ${anyRand ? 'AN' : 'AUS'}`;
+      btnAllRand.classList.toggle('active-toggle', anyRand);
+    }
+
+    pads.forEach((pad) => {
+      const cell = document.createElement('div');
+      cell.className = 'pad-cell';
+      cell.textContent = pad.id;
+      cell.title = `Pad ${pad.id}`;
+      cell.addEventListener('pointerdown', () => triggerPad(pad.id - 1, 127, 36 + pad.id));
+      padGrid.appendChild(cell);
+      pad.el = cell;
+
+      const card = document.createElement('div');
+      card.className = 'pad-route-card';
+
+      const num = document.createElement('span');
+      num.className = 'pad-route-num';
+      num.textContent = `P${pad.id}`;
+
+      const btns = document.createElement('div');
+      btns.className = 'pad-route-btns';
+
+      const lBtn = document.createElement('button');
+      lBtn.type = 'button';
+      lBtn.className = 'mini-flag';
+      lBtn.textContent = 'L';
+      lBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pad.linesOn = !pad.linesOn;
+        syncPadRoutingUI();
+      });
+
+      const sBtn = document.createElement('button');
+      sBtn.type = 'button';
+      sBtn.className = 'mini-flag';
+      sBtn.textContent = 'S';
+      sBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pad.shakeOn = !pad.shakeOn;
+        syncPadRoutingUI();
+      });
+
+      const rBtn = document.createElement('button');
+      rBtn.type = 'button';
+      rBtn.className = 'mini-flag';
+      rBtn.textContent = 'R';
+      rBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pad.randPosOn = !pad.randPosOn;
+        if (!pad.randPosOn) {
+          pad.centerX = pad.homeX;
+          pad.randSpotX = pad.homeX;
+        }
+        syncPadRoutingUI();
+      });
+
+      btns.appendChild(lBtn);
+      btns.appendChild(sBtn);
+      btns.appendChild(rBtn);
+      card.appendChild(num);
+      card.appendChild(btns);
+      padRoutingList.appendChild(card);
+
+      pad.cardEl = card;
+      pad.lineBtn = lBtn;
+      pad.shakeBtn = sBtn;
+      pad.randBtn = rBtn;
+    });
+    syncPadRoutingUI();
+
+    document.getElementById('btn-preset-kickshake').addEventListener('click', () => {
+      pads.forEach((p, idx) => {
+        p.linesOn = true;
+        p.shakeOn = idx === 0;
+      });
+      syncPadRoutingUI();
+    });
+
+    document.getElementById('btn-all-rand').addEventListener('click', () => {
+      const target = !pads.every((p) => p.randPosOn);
+      pads.forEach((p) => {
+        p.randPosOn = target;
+        if (!target) {
+          p.centerX = p.homeX;
+          p.randSpotX = p.homeX;
+        }
+      });
+      syncPadRoutingUI();
+    });
+
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`panel-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    let clockTicks = [];
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+
+    function resize() {
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.floor(viewW * dpr);
+      canvas.height = Math.floor(viewH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function applyBackgroundStyle(pulseBoost = 0) {
+      const glowAlpha = Math.min(0.85, bgGlow + pulseBoost);
+      if (bgMode === 'solid') {
+        bgLayer.style.background = bgColor;
+      } else if (bgMode === 'gradient') {
+        bgLayer.style.background = `linear-gradient(${bgAngle}deg, ${bgColor} 0%, ${bgColor2} 100%)`;
+      } else if (bgMode === 'neon') {
+        bgLayer.style.background =
+          `radial-gradient(circle at 50% 52%, rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${glowAlpha.toFixed(2)}) 0%, rgba(${bgRgb2.r}, ${bgRgb2.g}, ${bgRgb2.b}, 0.88) 52%, ${bgColor} 100%)`;
+      } else if (bgMode === 'pulse') {
+        const dynamicAng = (bgAngle + Math.sin(time * 0.8) * 35) % 360;
+        bgLayer.style.background =
+          `radial-gradient(circle at 50% 50%, rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${Math.min(0.9, glowAlpha * 1.15).toFixed(2)}) 0%, transparent 62%), linear-gradient(${dynamicAng}deg, ${bgColor}, ${bgColor2})`;
+      }
+    }
+
+    function setBgColor1(hex) {
+      bgColor = hex;
+      bgRgb1 = hexToRgb(hex);
+      inputBg.value = hex;
+      applyBackgroundStyle();
+    }
+
+    function setBgColor2(hex) {
+      bgColor2 = hex;
+      bgRgb2 = hexToRgb(hex);
+      inputBg2.value = hex;
+      applyBackgroundStyle();
+    }
+
+    function setNeonColor(hex) {
+      primaryColor = hex;
+      rgb1 = hexToRgb(hex);
+      inputColor.value = hex;
+      document.documentElement.style.setProperty('--accent', hex);
+      applyBackgroundStyle();
+    }
+
+    function setSecondColor(hex) {
+      secondaryColor = hex;
+      rgb2 = hexToRgb(hex);
+      inputColor2.value = hex;
+    }
+
+    function getColorForIndex(index, padObj = null) {
+      if (colorMode === 'pad-mix') {
+        const p = padObj || pads[index % NUM_PADS];
+        return { hex: p.color, rgb: p.rgb };
+      }
+      if (colorMode === 'duo') {
+        const useSecond = index % 2 === 1;
+        return {
+          hex: useSecond ? secondaryColor : primaryColor,
+          rgb: useSecond ? rgb2 : rgb1
+        };
+      }
+      if (colorMode === 'spectrum') {
+        const hue = Math.round((time * 32 + index * (360 / Math.max(1, waveCount))) % 360);
+        return { hex: `hsl(${hue}, 95%, 60%)`, hsl: `hsla(${hue}, 95%, 60%, ` };
+      }
+      return { hex: primaryColor, rgb: rgb1 };
+    }
+
+    function rgbaStr(cObj, alpha) {
+      const a = Math.max(0.06, Math.min(1, alpha)).toFixed(2);
+      if (cObj.hsl) return `${cObj.hsl}${a})`;
+      return `rgba(${cObj.rgb.r}, ${cObj.rgb.g}, ${cObj.rgb.b}, ${a})`;
+    }
+
+    function showTriggeredPadFeedback(pad) {
+      const colObj = getColorForIndex(pad.id - 1, pad);
+      const colHex = colObj.hex || primaryColor;
+      const padNumStr = String(pad.id).padStart(2, '0');
+      const modes = [];
+      if (pad.linesOn) modes.push(pad.randPosOn ? 'LINES·RND' : 'LINES·ZONE');
+      if (pad.shakeOn && shakeMasterEnabled) modes.push('SHAKE');
+      const modeText = modes.length ? modes.join(' + ') : 'MUTED';
+
+      padIndicator.textContent = `PAD ${padNumStr}`;
+      padIndicator.classList.add('pad-hot');
+      padIndicator.style.borderColor = colHex;
+      padIndicator.style.boxShadow = `0 0 10px ${colHex}`;
+
+      if (calloutEnabled) {
+        padCallout.textContent = `PAD ${padNumStr} · ${modeText}`;
+        padCallout.style.borderColor = colHex;
+        padCallout.style.boxShadow = `0 0 18px ${colHex}`;
+        padCallout.classList.add('active');
+      }
+
+      if (calloutTimer) clearTimeout(calloutTimer);
+      calloutTimer = setTimeout(() => {
+        padCallout.classList.remove('active');
+        padIndicator.classList.remove('pad-hot');
+        padIndicator.style.borderColor = '';
+        padIndicator.style.boxShadow = '';
+      }, 420);
+    }
+
+    inputName.addEventListener('input', (e) => { artistTitle.textContent = e.target.value || ' '; });
+    selectFont.addEventListener('change', (e) => { artistTitle.style.fontFamily = e.target.value; });
+    selectShape.addEventListener('change', (e) => { waveShape = e.target.value; });
+    selectColorMode.addEventListener('change', (e) => { colorMode = e.target.value; });
+    selectPadMap.addEventListener('change', (e) => { padMapMode = e.target.value; });
+
+    selectBgMode.addEventListener('change', (e) => {
+      bgMode = e.target.value;
+      applyBackgroundStyle();
+    });
+
+    rangeBgAngle.addEventListener('input', (e) => {
+      bgAngle = parseInt(e.target.value, 10);
+      valBgAngle.textContent = `${bgAngle}°`;
+      applyBackgroundStyle();
+    });
+
+    rangeBgGlow.addEventListener('input', (e) => {
+      bgGlow = parseFloat(e.target.value);
+      valBgGlow.textContent = bgGlow.toFixed(2);
+      applyBackgroundStyle();
+    });
+
+    rangeCount.addEventListener('input', (e) => {
+      waveCount = parseInt(e.target.value, 10);
+      valCount.textContent = waveCount;
+    });
+    rangeHeight.addEventListener('input', (e) => {
+      waveHeight = parseFloat(e.target.value);
+      valHeight.textContent = waveHeight.toFixed(1);
+    });
+    rangeFreq.addEventListener('input', (e) => {
+      freqScale = parseFloat(e.target.value);
+      valFreq.textContent = freqScale.toFixed(1);
+    });
+    rangeWidth.addEventListener('input', (e) => {
+      lineThickness = parseFloat(e.target.value);
+      valWidth.textContent = lineThickness.toFixed(1);
+    });
+    rangeSpread.addEventListener('input', (e) => {
+      spreadScale = parseFloat(e.target.value);
+      valSpread.textContent = spreadScale.toFixed(1);
+    });
+    rangeSpeed.addEventListener('input', (e) => {
+      waveSpeed = parseFloat(e.target.value);
+      valSpeed.textContent = waveSpeed.toFixed(1);
+    });
+    rangeTrail.addEventListener('input', (e) => {
+      trailAlpha = parseFloat(e.target.value);
+      valTrail.textContent = trailAlpha.toFixed(2);
+    });
+    rangeBaseY.addEventListener('input', (e) => {
+      baseLineRatio = parseFloat(e.target.value);
+      valBaseY.textContent = baseLineRatio.toFixed(2);
+    });
+
+    inputBg.addEventListener('input', (e) => setBgColor1(e.target.value));
+    inputBg2.addEventListener('input', (e) => setBgColor2(e.target.value));
+    inputColor.addEventListener('input', (e) => setNeonColor(e.target.value));
+    inputColor2.addEventListener('input', (e) => setSecondColor(e.target.value));
+
+    document.querySelectorAll('.swatch').forEach((sw) => {
+      sw.addEventListener('click', () => setNeonColor(sw.dataset.color));
+    });
+
+    const btnMirror = document.getElementById('btn-mirror');
+    btnMirror.addEventListener('click', () => {
+      mirrorEnabled = !mirrorEnabled;
+      btnMirror.textContent = `MIRROR: ${mirrorEnabled ? 'AN' : 'AUS'}`;
+      btnMirror.classList.toggle('active-toggle', mirrorEnabled);
+    });
+
+    const btnStrobe = document.getElementById('btn-strobe');
+    btnStrobe.addEventListener('click', () => {
+      strobeEnabled = !strobeEnabled;
+      btnStrobe.textContent = `STROBE: ${strobeEnabled ? 'AN' : 'AUS'}`;
+      btnStrobe.classList.toggle('active-toggle', strobeEnabled);
+    });
+
+    const btnShakeMaster = document.getElementById('btn-shake-master');
+    btnShakeMaster.addEventListener('click', () => {
+      shakeMasterEnabled = !shakeMasterEnabled;
+      btnShakeMaster.textContent = `SHAKE MASTER: ${shakeMasterEnabled ? 'AN' : 'AUS'}`;
+      btnShakeMaster.classList.toggle('active-toggle', shakeMasterEnabled);
+    });
+
+    const btnCalloutToggle = document.getElementById('btn-callout-toggle');
+    btnCalloutToggle.addEventListener('click', () => {
+      calloutEnabled = !calloutEnabled;
+      padCallout.classList.toggle('hidden-callout', !calloutEnabled);
+      if (!calloutEnabled) padCallout.classList.remove('active');
+      btnCalloutToggle.textContent = `PAD-POPUP: ${calloutEnabled ? 'AN' : 'AUS'}`;
+      btnCalloutToggle.classList.toggle('active-toggle', calloutEnabled);
+    });
+
+    const btnPadsToggle = document.getElementById('btn-pads-toggle');
+    btnPadsToggle.addEventListener('click', () => {
+      const hidden = padGrid.classList.toggle('hidden-grid');
+      btnPadsToggle.classList.toggle('active-toggle', !hidden);
+    });
+
+    document.getElementById('btn-hide-hud').addEventListener('click', () => {
+      document.body.classList.toggle('hud-hidden');
+    });
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    });
+
+    function getCurrentConfig() {
+      return {
+        name: inputName.value,
+        sub: subTag.textContent,
+        font: selectFont.value,
+        shape: waveShape,
+        colorMode,
+        bgMode,
+        bgAngle,
+        bgGlow,
+        count: waveCount,
+        height: waveHeight,
+        freq: freqScale,
+        width: lineThickness,
+        spread: spreadScale,
+        speed: waveSpeed,
+        trail: trailAlpha,
+        baseY: baseLineRatio,
+        mirrorEnabled,
+        calloutEnabled,
+        bgColor,
+        bgColor2,
+        color: primaryColor,
+        color2: secondaryColor,
+        strobeEnabled,
+        shakeMasterEnabled,
+        padRouting: pads.map((p) => ({
+          linesOn: p.linesOn,
+          shakeOn: p.shakeOn,
+          randPosOn: p.randPosOn
+        }))
+      };
+    }
+
+    function applyConfig(cfg) {
+      if (!cfg) return;
+      inputName.value = cfg.name ?? 'SVENTEKK';
+      artistTitle.textContent = inputName.value || ' ';
+      subTag.textContent = cfg.sub ?? 'KORG ELECTRIBE 2 // LIVE';
+      selectFont.value = cfg.font ?? "'Orbitron', sans-serif";
+      artistTitle.style.fontFamily = selectFont.value;
+      selectShape.value = cfg.shape ?? 'upward-lines';
+      waveShape = selectShape.value;
+      colorMode = cfg.colorMode ?? 'single';
+      selectColorMode.value = colorMode;
+
+      bgMode = cfg.bgMode ?? 'solid';
+      selectBgMode.value = bgMode;
+      bgAngle = cfg.bgAngle ?? 135;
+      rangeBgAngle.value = bgAngle;
+      valBgAngle.textContent = `${bgAngle}°`;
+      bgGlow = cfg.bgGlow ?? 0.4;
+      rangeBgGlow.value = bgGlow;
+      valBgGlow.textContent = bgGlow.toFixed(2);
+
+      waveCount = cfg.count ?? 8;
+      rangeCount.value = waveCount;
+      valCount.textContent = waveCount;
+
+      waveHeight = cfg.height ?? 1.3;
+      rangeHeight.value = waveHeight;
+      valHeight.textContent = waveHeight.toFixed(1);
+
+      freqScale = cfg.freq ?? 1.5;
+      rangeFreq.value = freqScale;
+      valFreq.textContent = freqScale.toFixed(1);
+
+      lineThickness = cfg.width ?? 2.5;
+      rangeWidth.value = lineThickness;
+      valWidth.textContent = lineThickness.toFixed(1);
+
+      spreadScale = cfg.spread ?? 1.0;
+      rangeSpread.value = spreadScale;
+      valSpread.textContent = spreadScale.toFixed(1);
+
+      waveSpeed = cfg.speed ?? 1.0;
+      rangeSpeed.value = waveSpeed;
+      valSpeed.textContent = waveSpeed.toFixed(1);
+
+      trailAlpha = cfg.trail ?? 0.34;
+      rangeTrail.value = trailAlpha;
+      valTrail.textContent = trailAlpha.toFixed(2);
+
+      baseLineRatio = cfg.baseY ?? 1.0;
+      rangeBaseY.value = baseLineRatio;
+      valBaseY.textContent = baseLineRatio.toFixed(2);
+
+      mirrorEnabled = cfg.mirrorEnabled !== undefined ? !!cfg.mirrorEnabled : true;
+      btnMirror.textContent = `MIRROR: ${mirrorEnabled ? 'AN' : 'AUS'}`;
+      btnMirror.classList.toggle('active-toggle', mirrorEnabled);
+
+      calloutEnabled = cfg.calloutEnabled !== undefined ? !!cfg.calloutEnabled : true;
+      padCallout.classList.toggle('hidden-callout', !calloutEnabled);
+      btnCalloutToggle.textContent = `PAD-POPUP: ${calloutEnabled ? 'AN' : 'AUS'}`;
+      btnCalloutToggle.classList.toggle('active-toggle', calloutEnabled);
+
+      setBgColor1(cfg.bgColor ?? '#07070b');
+      setBgColor2(cfg.bgColor2 ?? '#1c0714');
+      setNeonColor(cfg.color ?? '#ff1e42');
+      setSecondColor(cfg.color2 ?? '#00f5d4');
+
+      strobeEnabled = !!cfg.strobeEnabled;
+      btnStrobe.textContent = `STROBE: ${strobeEnabled ? 'AN' : 'AUS'}`;
+      btnStrobe.classList.toggle('active-toggle', strobeEnabled);
+
+      shakeMasterEnabled = cfg.shakeMasterEnabled !== undefined ? !!cfg.shakeMasterEnabled : true;
+      btnShakeMaster.textContent = `SHAKE MASTER: ${shakeMasterEnabled ? 'AN' : 'AUS'}`;
+      btnShakeMaster.classList.toggle('active-toggle', shakeMasterEnabled);
+
+      if (Array.isArray(cfg.padRouting)) {
+        cfg.padRouting.forEach((r, idx) => {
+          if (pads[idx] && r) {
+            pads[idx].linesOn = r.linesOn !== undefined ? !!r.linesOn : true;
+            pads[idx].shakeOn = !!r.shakeOn;
+            pads[idx].randPosOn = !!r.randPosOn;
+            pads[idx].centerX = pads[idx].homeX;
+            pads[idx].randSpotX = pads[idx].homeX;
+          }
+        });
+        syncPadRoutingUI();
+      }
+    }
+
+    document.getElementById('btn-save-preset').addEventListener('click', () => {
+      const slot = selectPreset.value || 'slot1';
+      selectPreset.value = slot;
+      localStorage.setItem(`sventekk_korg_live_${slot}`, JSON.stringify(getCurrentConfig()));
+      padIndicator.textContent = `SAVED ${slot.toUpperCase()}`;
+    });
+
+    selectPreset.addEventListener('change', () => {
+      if (!selectPreset.value) return;
+      const raw = localStorage.getItem(`sventekk_korg_live_${selectPreset.value}`);
+      if (raw) {
+        applyConfig(JSON.parse(raw));
+        padIndicator.textContent = `LOADED ${selectPreset.value.toUpperCase()}`;
+      }
+    });
+
+    function triggerPad(padIndex, velocity = 115, note = 36) {
+      const idx = ((padIndex % NUM_PADS) + NUM_PADS) % NUM_PADS;
+      const pad = pads[idx];
+      const strength = Math.max(0.35, (velocity / 127) * 1.45);
+
+      pad.hitFlash = 1.0;
+
+      if (pad.linesOn) {
+        pad.energy = Math.max(pad.energy, strength);
+        pad.freq = 1.8 + ((note % 12) * 0.32) + (idx * 0.12);
+        if (pad.randPosOn) {
+          const rndX = 0.04 + Math.random() * 0.92;
+          pad.centerX = rndX;
+          pad.randSpotX = rndX;
+        } else {
+          pad.centerX = pad.homeX;
+          pad.randSpotX = pad.homeX;
+        }
+      }
+
+      if (pad.shakeOn && shakeMasterEnabled) {
+        shakeImpulse = Math.max(shakeImpulse, strength * 0.95);
+      }
+
+      showTriggeredPadFeedback(pad);
+    }
+
+    const KEY_PAD_MAP = {
+      '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7,
+      '9': 8, '0': 9, 'q': 10, 'w': 11, 'e': 12, 'r': 13, 't': 14, 'z': 15, 'y': 15
+    };
+
+    document.getElementById('btn-test-pad').addEventListener('click', () => {
+      triggerPad(Math.floor(Math.random() * NUM_PADS), 125, 36 + Math.floor(Math.random() * 24));
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (e.repeat) return;
+      const k = e.key.toLowerCase();
+      if (e.code === 'Space') {
+        e.preventDefault();
+        triggerPad(Math.floor(Math.random() * NUM_PADS), 127, 36);
+      } else if (k in KEY_PAD_MAP) {
+        triggerPad(KEY_PAD_MAP[k], 125, 36 + KEY_PAD_MAP[k] * 2);
+      } else if (k === 'h') {
+        document.body.classList.toggle('hud-hidden');
+      }
+    });
+
+    function resolvePadIndex(channel, note) {
+      if (padMapMode === 'channel') {
+        return channel % NUM_PADS;
+      }
+      if (padMapMode === 'note') {
+        if (!noteToPadSlot.has(note)) {
+          noteToPadSlot.set(note, nextAutoSlot % NUM_PADS);
+          nextAutoSlot++;
+        }
+        return noteToPadSlot.get(note);
+      }
+      const prevNote = channelLastNote.get(channel);
+      channelLastNote.set(channel, note);
+      if (prevNote !== undefined && prevNote !== note) {
+        if (!noteToPadSlot.has(note)) {
+          noteToPadSlot.set(note, nextAutoSlot % NUM_PADS);
+          nextAutoSlot++;
+        }
+        return noteToPadSlot.get(note);
+      }
+      return channel % NUM_PADS;
+    }
+
+    function attachAllMidiInputs(access, isManualClick = false) {
+      const inputs = Array.from(access.inputs.values());
+
+      if (inputs.length === 0) {
+        midiStatus.textContent = isManualClick ? 'MIDI: KEIN GERÄT' : 'MIDI: OFF';
+        midiStatus.classList.remove('connected');
+        return;
+      }
+
+      for (const input of inputs) {
+        input.onmidimessage = null;
+        input.onmidimessage = handleMidiMessage;
+        if (typeof input.open === 'function') {
+          input.open().catch(() => {});
+        }
+      }
+
+      const deviceName = inputs[0].name || 'ELECTRIBE 2';
+      midiStatus.textContent = `MIDI: ${deviceName}`;
+      midiStatus.classList.add('connected');
+    }
+
+    async function connectMidi(isManualClick = false) {
+      if (!navigator.requestMIDIAccess) {
+        midiStatus.textContent = 'MIDI: UNSUPPORTED';
+        midiStatus.classList.remove('connected');
+        return;
+      }
+
+      midiStatus.textContent = 'MIDI: VERBINDE...';
+
+      try {
+        const access = await navigator.requestMIDIAccess({ sysex: false });
+        midiAccessInstance = access;
+        attachAllMidiInputs(access, isManualClick);
+
+        access.onstatechange = () => {
+          if (midiAccessInstance) {
+            attachAllMidiInputs(midiAccessInstance, isManualClick);
+          }
+        };
+      } catch (err) {
+        console.error('MIDI Error:', err);
+        midiStatus.textContent = 'MIDI: FEHLER / DENIED';
+        midiStatus.classList.remove('connected');
+      }
+    }
+
+    document.getElementById('btn-midi').addEventListener('click', () => connectMidi(true));
+    connectMidi(false);
+
+    function handleMidiMessage(msg) {
+      const [status, data1, data2] = msg.data;
+      const command = status & 0xf0;
+      const channel = status & 0x0f;
+
+      // MIDI Stop -> sofort alles auf 0
+      if (status === 0xfc || status === 0xff) {
+        pads.forEach((p) => { p.energy = 0; });
+        shakeImpulse = 0;
+        return;
+      }
+
+      // NUR echte Pad-Anschläge (Note On mit Velocity > 0) triggern Linien/Shake
+      if (command === 0x90 && data2 > 0) {
+        const padIdx = resolvePadIndex(channel, data1);
+        midiDebug.textContent = `CH ${channel + 1} | NOTE ${data1}`;
+        triggerPad(padIdx, data2, data1);
+      } else if (status === 0xf8) {
+        const now = performance.now();
+        clockTicks.push(now);
+        if (clockTicks.length > 25) clockTicks.shift();
+        if (clockTicks.length >= 25) {
+          const diff = clockTicks[24] - clockTicks[0];
+          const bpm = Math.round(60000 / diff);
+          if (bpm >= 60 && bpm <= 260) bpmDisplay.textContent = `${bpm} BPM`;
+        }
+      }
+    }
+
+    document.getElementById('btn-audio').addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        audioData = new Uint8Array(analyser.frequencyBinCount);
+        src.connect(analyser);
+        const btnAudio = document.getElementById('btn-audio');
+        btnAudio.textContent = 'AUDIO: ON';
+        btnAudio.classList.add('active-toggle');
+      } catch (err) {
+        alert('Audio-Zugriff fehlgeschlagen: ' + err.message);
+      }
+    });
+
+    applyBackgroundStyle();
+
+    function sampleEnergyAtNormX(normX, fallbackPadIndex) {
+      let bestEnergy = 0;
+      let bestPad = pads[fallbackPadIndex];
+
+      for (let p = 0; p < NUM_PADS; p++) {
+        const pad = pads[p];
+        if (!pad.linesOn || pad.energy <= 0.015) continue;
+
+        if (pad.randPosOn) {
+          const dist = Math.abs(normX - pad.randSpotX);
+          if (dist < 0.14) {
+            const weight = 1 - dist / 0.14;
+            const contribution = pad.energy * weight;
+            if (contribution > bestEnergy) {
+              bestEnergy = contribution;
+              bestPad = pad;
+            }
+          }
+        } else if (p === fallbackPadIndex) {
+          if (pad.energy > bestEnergy) {
+            bestEnergy = pad.energy;
+            bestPad = pad;
+          }
+        }
+      }
+
+      return { energy: bestEnergy, pad: bestPad };
+    }
+
+    function render() {
+      const w = viewW;
+      const h = viewH;
+      const midY = h * 0.5;
+      const floorY = baseLineRatio >= 0.99 ? h : Math.round(h * baseLineRatio);
+
+      if (analyser && audioData) {
+        analyser.getByteFrequencyData(audioData);
+        for (let i = 0; i < NUM_PADS; i++) {
+          const val = (audioData[i] || 0) / 255;
+          if (val > 0.35) {
+            if (pads[i].linesOn) {
+              pads[i].energy = Math.max(pads[i].energy, val * 1.15);
+            }
+            if (pads[i].shakeOn && shakeMasterEnabled && val > 0.72) {
+              shakeImpulse = Math.max(shakeImpulse, val * 0.85);
+            }
+          }
+        }
+      }
+
+      const anyActive = shakeImpulse > 0.015 || pads.some((p) => p.linesOn && p.energy > 0.015);
+      if (anyActive) {
+        time += 0.042 * waveSpeed;
+      }
+
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = `rgba(0, 0, 0, ${trailAlpha})`;
+      ctx.fillRect(0, 0, w, h);
+
+      if (bgMode === 'pulse' && shakeImpulse > 0.08) {
+        applyBackgroundStyle(shakeImpulse * 0.35);
+      }
+
+      const scale = 1 + shakeImpulse * 0.12;
+      artistTitle.style.transform = `scale(${scale.toFixed(3)})`;
+
+      if (shakeMasterEnabled && shakeImpulse > 0.14) {
+        const mag = shakeImpulse * 7.5;
+        stage.style.transform = `translate3d(${(Math.sin(time * 37) * mag).toFixed(1)}px, ${(Math.cos(time * 43) * mag).toFixed(1)}px, 0)`;
+      } else if (stage.style.transform !== 'translate3d(0px, 0px, 0)') {
+        stage.style.transform = 'translate3d(0px, 0px, 0)';
+      }
+
+      if (strobeEnabled && shakeImpulse > 0.55) {
+        strobeLayer.style.background = primaryColor;
+        strobeLayer.style.opacity = Math.min(0.22, shakeImpulse * 0.2).toFixed(2);
+      } else {
+        strobeLayer.style.opacity = '0';
+      }
+
+      // Wenn kein einziges Pad aktiv ist, absolut nichts zeichnen!
+      if (anyActive) {
+        const steps = waveCount > 10 ? 68 : 96;
+
+        if (waveShape === 'upward-lines') {
+          const linesPerPad = Math.max(1, Math.min(4, Math.ceil(waveCount / 4)));
+          const totalLines = NUM_PADS * linesPerPad;
+          const rawSpacing = w / totalLines;
+          const spacing = rawSpacing * Math.min(1.25, Math.max(0.6, spreadScale));
+          const spanW = totalLines * spacing;
+          const startX = (w - spanW) * 0.5;
+
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.lineWidth = lineThickness;
+
+          for (let i = 0; i < totalLines; i++) {
+            const lineNormX = (i + 0.5) / totalLines;
+            const homePadIdx = Math.floor(i / linesPerPad);
+            const { energy: activeEnergy, pad } = sampleEnergyAtNormX(lineNormX, homePadIdx);
+            if (activeEnergy <= 0.015) continue;
+
+            const col = getColorForIndex(pad.id - 1, pad);
+            const x = Math.round(startX + i * spacing + spacing * 0.5);
+            const waveMod = 0.55 + 0.45 * Math.sin(i * 0.45 * freqScale + time * 2.2 + pad.phase);
+            const rise = activeEnergy * 260 * waveMod * waveHeight;
+            const yTop = Math.max(12, floorY - rise);
+
+            ctx.strokeStyle = rgbaStr(col, 0.95);
+            ctx.beginPath();
+            ctx.moveTo(x, floorY);
+            ctx.lineTo(x, yTop);
+            ctx.stroke();
+
+            if (activeEnergy > 0.14) {
+              ctx.fillStyle = rgbaStr(col, 1);
+              ctx.fillRect(x - lineThickness * 0.65, yTop - lineThickness * 0.65, lineThickness * 1.3, lineThickness * 1.3);
+            }
+          }
+        } else if (waveShape === 'matrix-bars') {
+          const barsPerPad = Math.max(1, Math.min(4, Math.floor(waveCount / 3)));
+          const totalBars = NUM_PADS * barsPerPad;
+          const barW = (w / totalBars) * Math.min(1.2, Math.max(0.6, spreadScale));
+          const startX = (w - totalBars * barW) * 0.5;
+          const rectW = Math.max(2, Math.floor(barW - Math.max(2, lineThickness)));
+
+          ctx.globalCompositeOperation = 'source-over';
+
+          for (let b = 0; b < totalBars; b++) {
+            const barNormX = (b + 0.5) / totalBars;
+            const homePadIdx = Math.floor(b / barsPerPad);
+            const { energy: activeEnergy, pad } = sampleEnergyAtNormX(barNormX, homePadIdx);
+            if (activeEnergy <= 0.015) continue;
+
+            const col = getColorForIndex(pad.id - 1, pad);
+            const waveMod = 0.55 + 0.45 * Math.sin(b * 0.4 * freqScale + time * 2.0 + pad.phase);
+            const amp = activeEnergy * waveMod * (h * 0.38) * waveHeight;
+            const x = Math.round(startX + b * barW + 1);
+
+            ctx.fillStyle = rgbaStr(col, 0.92);
+            if (mirrorEnabled) {
+              ctx.fillRect(x, Math.round(midY - amp), rectW, Math.round(amp * 2));
+            } else {
+              const barH = Math.round(amp * 1.4);
+              ctx.fillRect(x, floorY - barH, rectW, barH);
+            }
+          }
+        } else {
+          ctx.globalCompositeOperation = 'lighter';
+
+          if (waveShape === 'ribbon') {
+            for (let layer = 0; layer < waveCount; layer++) {
+              const pad = pads[layer % NUM_PADS];
+              const col = getColorForIndex(layer, pad);
+              const ratio = layer / Math.max(1, waveCount);
+              const alpha = (1 - ratio * 0.72) * 0.85;
+              ctx.strokeStyle = rgbaStr(col, alpha);
+              ctx.lineWidth = layer === 0 ? lineThickness + 0.6 : Math.max(1, lineThickness * 0.65);
+
+              const layerOffset = (layer - (waveCount - 1) * 0.5) * 9 * spreadScale;
+
+              ctx.beginPath();
+              for (let s = 0; s <= steps; s++) {
+                const nx = s / steps;
+                const x = nx * w;
+
+                let padSum = 0;
+                for (let p = 0; p < NUM_PADS; p++) {
+                  const cur = pads[p];
+                  if (!cur.linesOn || cur.energy <= 0.015) continue;
+                  const focusX = cur.randPosOn ? cur.randSpotX : cur.centerX;
+                  const dist = (nx - focusX) * 3.0;
+                  const env = Math.exp(-dist * dist);
+                  padSum += Math.sin(nx * Math.PI * cur.freq * freqScale + time * 1.7 + cur.phase - layer * 0.14)
+                            * cur.energy * (0.45 + 0.55 * env);
+                }
+
+                const y = midY + layerOffset + padSum * (h * 0.24) * waveHeight;
+
+                if (s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.stroke();
+            }
+          } else if (waveShape === 'dual-wave') {
+            for (let layer = 0; layer < waveCount; layer++) {
+              const pad = pads[layer % NUM_PADS];
+              if (!pad.linesOn || pad.energy <= 0.015) continue;
+              const col = getColorForIndex(layer, pad);
+              ctx.strokeStyle = rgbaStr(col, Math.max(0.2, 0.88 - layer * 0.05));
+              ctx.lineWidth = lineThickness;
+              const spreadY = (layer - (waveCount - 1) * 0.5) * 10 * spreadScale;
+              const dirs = mirrorEnabled ? [-1, 1] : [1];
+
+              for (const dir of dirs) {
+                ctx.beginPath();
+                for (let s = 0; s <= steps; s++) {
+                  const nx = s / steps;
+                  const x = nx * w;
+                  const amp = pad.energy * 0.3 * (h * 0.36) * waveHeight;
+                  const y = midY + spreadY + dir * Math.sin(nx * Math.PI * 2.5 * freqScale + time * 2.1 * dir + pad.phase) * amp;
+                  if (s === 0) ctx.moveTo(x, y);
+                  else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+              }
+            }
+          } else if (waveShape === 'harmonic') {
+            for (let layer = 0; layer < waveCount; layer++) {
+              const pad = pads[layer % NUM_PADS];
+              if (!pad.linesOn || pad.energy <= 0.015) continue;
+              const col = getColorForIndex(layer, pad);
+              ctx.strokeStyle = rgbaStr(col, 0.22 + pad.energy * 0.72);
+              ctx.lineWidth = lineThickness;
+
+              ctx.beginPath();
+              for (let s = 0; s <= steps; s++) {
+                const nx = s / steps;
+                const x = nx * w;
+                const h1 = Math.sin(nx * Math.PI * 2 * freqScale + time * 1.8 + pad.phase);
+                const h2 = 0.5 * Math.cos(nx * Math.PI * 4 * freqScale - time * 1.3 + layer * 0.4 * spreadScale);
+                const amp = pad.energy * 0.32 * (h * 0.34) * waveHeight;
+                const y = midY + (h1 + h2) * amp;
+                if (s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.stroke();
+            }
+          } else if (waveShape === 'pulse-arc') {
+            const cx = w * 0.5;
+            const cy = midY;
+            const pts = 56;
+            const lobes = Math.max(2, Math.round(4 * freqScale));
+
+            for (let i = 0; i < waveCount; i++) {
+              const pad = pads[i % NUM_PADS];
+              if (!pad.linesOn || pad.energy <= 0.015) continue;
+              const col = getColorForIndex(i, pad);
+              const radius = (85 + i * 24 * spreadScale) + pad.energy * 56 * waveHeight;
+              const wobbleAmp = pad.energy * 26 * waveHeight;
+              ctx.strokeStyle = rgbaStr(col, 0.2 + pad.energy * 0.76);
+              ctx.lineWidth = lineThickness;
+
+              ctx.beginPath();
+              for (let p = 0; p <= pts; p++) {
+                const ang = (p / pts) * Math.PI * 2;
+                const r = radius + Math.sin(ang * lobes + time * 2.2 + pad.phase) * wobbleAmp;
+                const x = cx + Math.cos(ang) * r;
+                const y = cy + Math.sin(ang) * r;
+                if (p === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.closePath();
+              ctx.stroke();
+            }
+          } else if (waveShape === 'zaag') {
+            for (let i = 0; i < waveCount; i++) {
+              const pad = pads[i % NUM_PADS];
+              if (!pad.linesOn || pad.energy <= 0.015) continue;
+              const col = getColorForIndex(i, pad);
+              ctx.strokeStyle = rgbaStr(col, 0.22 + pad.energy * 0.72);
+              ctx.lineWidth = lineThickness;
+              const offset = (i - (waveCount - 1) * 0.5) * 12 * spreadScale;
+
+              ctx.beginPath();
+              for (let s = 0; s <= steps; s++) {
+                const nx = s / steps;
+                const x = nx * w;
+                const saw = 2 * ((nx * 3 * freqScale + time * 0.9 + pad.phase) % 1) - 1;
+                const amp = pad.energy * 0.34 * (h * 0.34) * waveHeight;
+                const y = midY + offset + saw * amp;
+                if (s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < NUM_PADS; i++) {
+        const p = pads[i];
+        const col = getColorForIndex(i, p);
+        const activeHex = col.hex || primaryColor;
+
+        if (p.el) {
+          const isLit = p.hitFlash > 0.08 || (p.linesOn && p.energy > 0.06);
+          p.el.classList.toggle('triggered', p.hitFlash > 0.25);
+          if (isLit) {
+            p.el.style.background = activeHex;
+            p.el.style.color = '#07070b';
+            p.el.style.boxShadow = `0 0 12px ${activeHex}`;
+          } else if (p.el.style.background !== '') {
+            p.el.style.background = '';
+            p.el.style.color = '';
+            p.el.style.boxShadow = '';
+          }
+        }
+
+        if (p.cardEl) {
+          p.cardEl.classList.toggle('triggered', p.hitFlash > 0.25);
+        }
+
+        p.energy *= 0.88;
+        if (p.energy < 0.01) p.energy = 0;
+        p.hitFlash *= 0.84;
+      }
+
+      shakeImpulse *= 0.85;
+      if (shakeImpulse < 0.01) shakeImpulse = 0;
+
+      requestAnimationFrame(render);
+    }
+
+    render();
+  </script>
+</body>
+</html>

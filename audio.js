@@ -11,9 +11,15 @@ const KICK_PRESETS = {
 };
 
 const UPTEMPO_PRESETS = {
-  piep:   { label: 'PIEP KICK',   start: 880,  end: 64, zaag: 0.20, snap: 24, drive: 18, dauer: 0.26 },
-  zaag:   { label: 'ZAAG KICK',   start: 640,  end: 68, zaag: 0.72, snap: 42, drive: 24, dauer: 0.32 },
-  terror: { label: 'TERROR 230+', start: 1080, end: 78, zaag: 0.95, snap: 18, drive: 34, dauer: 0.24 }
+  piep:   { label: 'PIEP KICK',   start: 1120, end: 64, zaag: 0.25, snap: 18, drive: 24, dauer: 0.24 },
+  zaag:   { label: 'ZAAG KICK',   start: 420,  end: 50, zaag: 0.90, snap: 38, drive: 28, dauer: 0.32 },
+  terror: { label: 'TERROR 230+', start: 1280, end: 72, zaag: 0.95, snap: 14, drive: 38, dauer: 0.22 }
+};
+
+const BASS_PRESETS = {
+  sub:     { label: 'SUB BASS',    freq: 55, sub: 1.15, cutoff: 240,  res: 2.0, drive: 3.5,  dauer: 0.48 },
+  offbeat: { label: 'OFFBEAT SAW', freq: 65, sub: 0.85, cutoff: 780,  res: 4.0, drive: 8.5,  dauer: 0.28 },
+  reese:   { label: 'DARK REESE',  freq: 48, sub: 1.00, cutoff: 1150, res: 2.5, drive: 12.0, dauer: 0.75 }
 };
 
 const SNARE_PRESETS = {
@@ -41,27 +47,34 @@ const MELODY_PATTERNS = {
   octave:    [0, 7, 0, 7, 3, 7, 4, 7]
 };
 
-const trackVoiceModes = ['mono', 'mono', 'poly', 'mono'];
-const activeNodesByTrack = [[], [], [], []];
+// 6 Spuren: 0=Kick, 1=Uptempo, 2=Bass, 3=Snare, 4=Hi-Hat, 5=Melody
+const trackVoiceModes = ['mono', 'mono', 'mono', 'mono', 'poly', 'mono'];
+const trackVolumes = [1.0, 1.0, 0.9, 0.95, 0.85, 0.9];
+const activeNodesByTrack = [[], [], [], [], [], []];
 
 const sequenceGrid = [
-  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0],
-  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1],
-  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1],
-  [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0]
+  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0], // 0: 01 KICK
+  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], // 1: 02 UPTEMPO
+  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], // 2: 03 BASS
+  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1], // 3: 04 SNARE
+  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1], // 4: 05 HI-HAT
+  [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0]  // 5: 06 MELODY
 ];
 
 const presetSamples = [
   { title: 'SVENTEKK_Hard_Kick_180BPM.wav', type: 'Hard Kick', generator: 'hardtekk' },
   { title: 'SVENTEKK_Uptempo_Zaag_210.wav', type: 'Zaag Kick', generator: 'uptempo_zaag' },
   { title: 'SVENTEKK_Uptempo_Piep_220.wav', type: 'Piep Kick', generator: 'uptempo_piep' },
-  { title: 'SVENTEKK_Industrial_Rumble.wav', type: 'Industrial', generator: 'industrial' },
+  { title: 'SVENTEKK_Sub_Bass_55Hz.wav', type: 'Sub Bass', generator: 'bass' },
   { title: 'SVENTEKK_Rave_Phrase_4Bars.wav', type: 'Melodie', generator: 'melody' }
 ];
+
+const DOWNLOAD_COUNT_KEY = 'sventekk_wav_download_v1';
 
 let audioCtx = null;
 let masterLimiter = null;
 let sharedEchoBus = null;
+let melodyEchoBus = null;
 let isPlaying = false;
 let currentStep = 0;
 let seqMelodyStepIndex = 0;
@@ -70,6 +83,7 @@ let melodyLoopTimer = null;
 let melodySessionId = 0;
 let activeKickMode = 'hard';
 let activeUptempoMode = 'zaag';
+let activeBassMode = 'sub';
 let activeSnareMode = 'snare';
 let currentMelodyIndices = [...MELODY_PATTERNS.offbeat];
 
@@ -93,29 +107,65 @@ function getMasterOut() {
   return masterLimiter;
 }
 
+async function ensureAudioReady() {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
+  return ctx;
+}
+
+function getTrackOut(ctx, baseDest, trackIdx) {
+  if (trackIdx === null || trackIdx === undefined) return baseDest;
+  const vol = trackVolumes[trackIdx] !== undefined ? trackVolumes[trackIdx] : 1.0;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(Math.max(0, Math.min(1.5, vol)), ctx.currentTime);
+  g.connect(baseDest);
+  return g;
+}
+
+function createEchoChain(ctx, dest, stepSec) {
+  const input = ctx.createGain();
+  const delay = ctx.createDelay(1.0);
+  const feedback = ctx.createGain();
+  const wet = ctx.createGain();
+
+  delay.delayTime.setValueAtTime(Math.min(0.75, stepSec * 0.75), ctx.currentTime);
+  feedback.gain.setValueAtTime(0.22, ctx.currentTime);
+  wet.gain.setValueAtTime(0.16, ctx.currentTime);
+
+  input.connect(dest);
+  input.connect(delay);
+  delay.connect(feedback);
+  feedback.connect(delay);
+  delay.connect(wet);
+  wet.connect(dest);
+
+  return { ctx, input, delay };
+}
+
 function getSharedEchoBus(ctx, dest, stepSec) {
-  if (!sharedEchoBus || sharedEchoBus.ctx !== ctx) {
-    const input = ctx.createGain();
-    const delay = ctx.createDelay(1.0);
-    const feedback = ctx.createGain();
-    const wet = ctx.createGain();
-
-    delay.delayTime.setValueAtTime(Math.min(0.75, stepSec * 0.75), ctx.currentTime);
-    feedback.gain.setValueAtTime(0.25, ctx.currentTime);
-    wet.gain.setValueAtTime(0.22, ctx.currentTime);
-
-    input.connect(dest);
-    input.connect(delay);
-    delay.connect(feedback);
-    feedback.connect(delay);
-    delay.connect(wet);
-    wet.connect(dest);
-
-    sharedEchoBus = { ctx, input, delay };
+  if (!sharedEchoBus || sharedEchoBus.ctx !== ctx || sharedEchoBus.dest !== dest) {
+    const chain = createEchoChain(ctx, dest, stepSec);
+    sharedEchoBus = { ...chain, dest };
   } else {
     sharedEchoBus.delay.delayTime.setValueAtTime(Math.min(0.75, stepSec * 0.75), ctx.currentTime);
   }
   return sharedEchoBus.input;
+}
+
+function getMelodyTrackEchoBus(ctx, baseDest, stepSec) {
+  if (!melodyEchoBus || melodyEchoBus.ctx !== ctx || melodyEchoBus.baseDest !== baseDest) {
+    const trackGain = ctx.createGain();
+    trackGain.connect(baseDest);
+    const chain = createEchoChain(ctx, trackGain, stepSec);
+    melodyEchoBus = { ...chain, trackGain, baseDest };
+  } else {
+    melodyEchoBus.delay.delayTime.setValueAtTime(Math.min(0.75, stepSec * 0.75), ctx.currentTime);
+  }
+  const vol = trackVolumes[5] !== undefined ? trackVolumes[5] : 1.0;
+  melodyEchoBus.trackGain.gain.setValueAtTime(Math.max(0, Math.min(1.5, vol)), ctx.currentTime);
+  return melodyEchoBus.input;
 }
 
 function registerVoice(trackIdx, stopFn) {
@@ -187,6 +237,13 @@ function initAllControlBindings() {
   bindSliderAndNumber('up_drive', 'num-up-drive');
   bindSliderAndNumber('up_dauer', 'num-up-dauer');
 
+  bindSliderAndNumber('bass_freq', 'num-bass-freq');
+  bindSliderAndNumber('bass_sub', 'num-bass-sub');
+  bindSliderAndNumber('bass_cutoff', 'num-bass-cutoff');
+  bindSliderAndNumber('bass_res', 'num-bass-res');
+  bindSliderAndNumber('bass_drive', 'num-bass-drive');
+  bindSliderAndNumber('bass_dauer', 'num-bass-dauer');
+
   bindSliderAndNumber('snare_tone', 'num-snare-tone');
   bindSliderAndNumber('snare_len', 'num-snare-len');
   bindSliderAndNumber('snare_filter', 'num-snare-filter');
@@ -194,6 +251,7 @@ function initAllControlBindings() {
   bindSliderAndNumber('hat_hits', 'num-hat-hits');
 
   bindSliderAndNumber('melody_gate', 'num-mel-gate');
+  bindSliderAndNumber('mel_attack', 'num-mel-attack');
   bindSliderAndNumber('mel_release', 'num-mel-rel');
   bindSliderAndNumber('mel_cutoff', 'num-mel-cutoff');
   bindSliderAndNumber('mel_detune', 'num-mel-detune');
@@ -215,7 +273,7 @@ function setKickMode(mode) {
   if (!p) return;
   activeKickMode = mode;
 
-  document.querySelectorAll('.style-btn:not(.up-style):not(.snare-style)').forEach(btn => {
+  document.querySelectorAll('.style-btn:not(.up-style):not(.bass-style):not(.snare-style)').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   document.getElementById('kick-mode-badge').innerText = p.label;
@@ -249,6 +307,26 @@ function setUptempoMode(mode) {
   setStatus(`UPTEMPO MODUS: ${p.label}`);
 }
 
+function setBassMode(mode) {
+  const p = BASS_PRESETS[mode];
+  if (!p) return;
+  activeBassMode = mode;
+
+  document.querySelectorAll('.bass-style').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.bassmode === mode);
+  });
+  const badge = document.getElementById('bass-mode-badge');
+  if (badge) badge.innerText = p.label;
+
+  setControlValue('bass_freq', 'num-bass-freq', p.freq);
+  setControlValue('bass_sub', 'num-bass-sub', p.sub);
+  setControlValue('bass_cutoff', 'num-bass-cutoff', p.cutoff);
+  setControlValue('bass_res', 'num-bass-res', p.res);
+  setControlValue('bass_drive', 'num-bass-drive', p.drive);
+  setControlValue('bass_dauer', 'num-bass-dauer', p.dauer);
+  setStatus(`BASS MODUS: ${p.label}`);
+}
+
 function setSnareMode(mode) {
   const p = SNARE_PRESETS[mode];
   if (!p) return;
@@ -268,7 +346,7 @@ function setSnareMode(mode) {
 }
 
 /* =========================================================================
-   3. SOUND-SYNTHESE (KICKS, UPTEMPO, DRUMS, MELODIE)
+   3. SOUND-SYNTHESE (KICKS, UPTEMPO, BASS, DRUMS, MELODIE)
    ========================================================================= */
 function buildMelodyNotes() {
   const patternType = document.getElementById('melody_pattern')?.value || 'offbeat';
@@ -327,6 +405,18 @@ function getUptempoParams() {
   };
 }
 
+function getBassParams() {
+  return {
+    mode: activeBassMode,
+    freq: parseFloat(document.getElementById('bass_freq').value),
+    sub: parseFloat(document.getElementById('bass_sub').value),
+    cutoff: parseFloat(document.getElementById('bass_cutoff').value),
+    res: parseFloat(document.getElementById('bass_res').value),
+    drive: parseFloat(document.getElementById('bass_drive').value),
+    duration: parseFloat(document.getElementById('bass_dauer').value)
+  };
+}
+
 function getSnareParams() {
   return {
     mode: activeSnareMode,
@@ -344,14 +434,16 @@ function makeDistortionCurve(amount, mode = 'soft') {
   for (let i = 0; i < n; ++i) {
     const x = (i * 2) / n - 1;
     if (mode === 'piep') {
-      const folded = Math.sin(x * Math.PI * 1.25) * 0.55 + Math.tanh(x * (k / 11)) * 0.75;
-      curve[i] = Math.max(-0.94, Math.min(0.94, folded));
-    } else if (mode === 'zaag') {
-      const folded = Math.sin(x * Math.PI * 1.8) * 0.65 + Math.tanh(x * (k / 9)) * 0.80;
+      const folded = Math.sin(x * Math.PI * 2.4) * 0.75 + Math.tanh(x * (k / 7)) * 0.85;
       curve[i] = Math.max(-0.96, Math.min(0.96, folded));
+    } else if (mode === 'zaag') {
+      const sawTooth = (x * (1 + k / 6)) % 2;
+      const rawZaag = sawTooth > 1 ? sawTooth - 2 : sawTooth;
+      const folded = rawZaag * 0.8 + Math.sin(x * Math.PI * 3.0) * 0.45;
+      curve[i] = Math.max(-0.98, Math.min(0.98, folded));
     } else if (mode === 'terror') {
-      const hardClip = Math.max(-0.82, Math.min(0.82, x * (1 + k / 8)));
-      curve[i] = Math.sin(hardClip * 2.8) * 0.95;
+      const hardClip = Math.max(-0.72, Math.min(0.72, x * (1.4 + k / 5)));
+      curve[i] = Math.sin(hardClip * 4.2) * 0.98;
     } else if (mode === 'gabber' || mode === 'square') {
       curve[i] = Math.max(-0.92, Math.min(0.92, Math.tanh(x * (k / 14)) * 1.25));
     } else if (mode === 'industrial' || mode === 'schranz') {
@@ -463,14 +555,89 @@ function triggerKick(ctx, dest, params, startTime, trackIdx = null) {
   });
 }
 
+function triggerBass(ctx, dest, params, startTime, trackIdx = null) {
+  const {
+    mode = activeBassMode,
+    freq = 55,
+    sub = 1.15,
+    cutoff = 240,
+    res = 2.0,
+    drive = 3.5,
+    duration = 0.48
+  } = params;
+
+  const subOsc = ctx.createOscillator();
+  subOsc.type = 'sine';
+  subOsc.frequency.setValueAtTime(freq, startTime);
+
+  const saw1 = ctx.createOscillator();
+  const saw2 = ctx.createOscillator();
+  saw1.type = 'sawtooth';
+  saw2.type = mode === 'reese' ? 'sawtooth' : 'triangle';
+  saw1.frequency.setValueAtTime(freq, startTime);
+  saw2.frequency.setValueAtTime(freq, startTime);
+  if (mode === 'reese') {
+    saw1.detune.setValueAtTime(-18, startTime);
+    saw2.detune.setValueAtTime(18, startTime);
+  }
+
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(Math.min(1.15, sub * 0.72), startTime);
+
+  const topGain = ctx.createGain();
+  topGain.gain.setValueAtTime(mode === 'sub' ? 0.25 : 0.62, startTime);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(cutoff, startTime);
+  filter.frequency.exponentialRampToValueAtTime(Math.max(65, cutoff * 0.45), startTime + duration);
+  filter.Q.setValueAtTime(res, startTime);
+
+  const shaper = ctx.createWaveShaper();
+  shaper.curve = makeDistortionCurve(drive, mode === 'reese' ? 'gabber' : 'soft');
+  shaper.oversample = '2x';
+
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(0.001, startTime);
+  masterGain.gain.linearRampToValueAtTime(0.92, startTime + (mode === 'offbeat' ? 0.018 : 0.006));
+  masterGain.gain.setValueAtTime(0.84, startTime + Math.max(0.03, duration * 0.7));
+  masterGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  subOsc.connect(subGain);
+  saw1.connect(topGain);
+  saw2.connect(topGain);
+  subGain.connect(filter);
+  topGain.connect(filter);
+  filter.connect(shaper);
+  shaper.connect(masterGain);
+  masterGain.connect(dest);
+
+  subOsc.start(startTime);
+  saw1.start(startTime);
+  saw2.start(startTime);
+  subOsc.stop(startTime + duration + 0.02);
+  saw1.stop(startTime + duration + 0.02);
+  saw2.stop(startTime + duration + 0.02);
+
+  registerVoice(trackIdx, () => {
+    try {
+      masterGain.gain.cancelScheduledValues(ctx.currentTime);
+      masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      subOsc.stop();
+      saw1.stop();
+      saw2.stop();
+    } catch (e) {}
+  });
+}
+
 function stopMelodyPreview() {
   melodySessionId += 1;
   if (melodyLoopTimer) {
     clearTimeout(melodyLoopTimer);
     melodyLoopTimer = null;
   }
-  while (activeNodesByTrack[3].length > 0) {
-    const fn = activeNodesByTrack[3].pop();
+  while (activeNodesByTrack[5].length > 0) {
+    const fn = activeNodesByTrack[5].pop();
     try { fn(); } catch (e) {}
   }
   setStatus('MELODIE GESTOPPT');
@@ -481,8 +648,13 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
   const cutoff = parseFloat(document.getElementById('mel_cutoff')?.value || 3600);
   const detune = parseFloat(document.getElementById('mel_detune')?.value || 22);
   const rel = parseFloat(document.getElementById('mel_release')?.value || 0.25);
+  const attackMs = parseFloat(document.getElementById('mel_attack')?.value || 0);
+
+  const attackSec = Math.max(0.001, attackMs / 1000);
+  const noteDur = Math.max(0.02, dur);
   const t0 = Math.max(0, startTime);
-  const totalEnd = t0 + dur + rel;
+  const noteEnd = t0 + noteDur;
+  const totalEnd = noteEnd + Math.max(0.01, rel);
 
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
@@ -502,13 +674,13 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
     filter.type = 'lowpass';
     filter.Q.setValueAtTime(14, t0);
     filter.frequency.setValueAtTime(Math.min(10000, cutoff * 1.4), t0);
-    filter.frequency.exponentialRampToValueAtTime(320, totalEnd);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(120, cutoff * 0.2), totalEnd);
   } else if (synthType === 'screech') {
     osc1.type = 'sawtooth';
     osc2.type = 'square';
     osc3.type = 'sawtooth';
     osc1.frequency.setValueAtTime(freq * 1.02, t0);
-    osc1.frequency.exponentialRampToValueAtTime(freq, t0 + dur * 0.5);
+    osc1.frequency.exponentialRampToValueAtTime(freq, t0 + Math.min(0.04, noteDur * 0.35));
     osc2.frequency.setValueAtTime(freq * 1.5, t0);
     osc3.frequency.setValueAtTime(freq * 2, t0);
 
@@ -526,7 +698,7 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
 
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(Math.min(12000, cutoff * 1.8), t0);
-    filter.frequency.exponentialRampToValueAtTime(400, totalEnd);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(150, cutoff * 0.25), totalEnd);
   } else {
     osc1.type = 'sawtooth';
     osc2.type = 'sawtooth';
@@ -542,9 +714,13 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
     filter.Q.setValueAtTime(4, t0);
   }
 
-  gain.gain.setValueAtTime(0.001, t0);
-  gain.gain.linearRampToValueAtTime(0.38, t0 + 0.002);
-  gain.gain.setValueAtTime(0.32, t0 + Math.max(0.01, dur * 0.85));
+  if (attackMs <= 2) {
+    gain.gain.setValueAtTime(0.42, t0);
+  } else {
+    gain.gain.setValueAtTime(0.0008, t0);
+    gain.gain.linearRampToValueAtTime(0.42, t0 + attackSec);
+  }
+  gain.gain.setValueAtTime(0.36, Math.max(t0 + attackSec + 0.005, noteEnd));
   gain.gain.exponentialRampToValueAtTime(0.0008, totalEnd);
 
   osc1.connect(filter);
@@ -647,36 +823,55 @@ function triggerUptempoKick(ctx, dest, params, startTime, trackIdx = null) {
     mode = activeUptempoMode,
     startHz,
     endHz,
-    zaag = 0.65,
-    snapMs = 42,
-    drive = 22,
+    zaag = 0.9,
+    snapMs = 38,
+    drive = 28,
     duration = 0.32
   } = params;
 
-  const snapSec = Math.max(0.012, snapMs / 1000);
-  const piepFactor = mode === 'piep' ? 1.25 : mode === 'terror' ? 1.35 : 1.0;
+  const snapSec = Math.max(0.01, snapMs / 1000);
+  const modeMult = mode === 'piep' ? 1.3 : mode === 'terror' ? 1.45 : 1.0;
 
-  const tokOsc = ctx.createOscillator();
-  tokOsc.type = mode === 'terror' ? 'square' : 'sine';
-  tokOsc.frequency.setValueAtTime(startHz * piepFactor, startTime);
-  tokOsc.frequency.exponentialRampToValueAtTime(Math.max(42, endHz * 1.15), startTime + snapSec);
-  tokOsc.frequency.exponentialRampToValueAtTime(Math.max(36, endHz * 0.92), startTime + duration);
+  const bodyOsc = ctx.createOscillator();
+  bodyOsc.type = mode === 'terror' ? 'square' : 'triangle';
+  bodyOsc.frequency.setValueAtTime(startHz * modeMult, startTime);
+  bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(36, endHz * 1.25), startTime + snapSec);
+  bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(30, endHz), startTime + duration);
 
   const zaagOsc = ctx.createOscillator();
   zaagOsc.type = 'sawtooth';
-  const zaagStart = mode === 'piep' ? startHz * 0.75 : startHz * 0.5;
-  zaagOsc.frequency.setValueAtTime(zaagStart, startTime);
-  zaagOsc.frequency.exponentialRampToValueAtTime(Math.max(42, endHz), startTime + snapSec * 1.15);
+  const zaagTop = mode === 'zaag'
+    ? Math.max(120, startHz * 0.75)
+    : mode === 'piep'
+      ? startHz * 1.25
+      : startHz * 0.95;
+  const zaagTarget = mode === 'zaag'
+    ? Math.max(32, endHz * 0.95)
+    : Math.max(45, endHz);
+  const zaagDropTime = mode === 'zaag'
+    ? Math.min(duration * 0.75, snapSec * 1.8)
+    : Math.min(duration * 0.85, snapSec * 2.2);
+
+  zaagOsc.frequency.setValueAtTime(zaagTop, startTime);
+  zaagOsc.frequency.exponentialRampToValueAtTime(zaagTarget, startTime + zaagDropTime);
 
   const zaagFilter = ctx.createBiquadFilter();
-  zaagFilter.type = mode === 'piep' ? 'peaking' : 'bandpass';
-  zaagFilter.frequency.setValueAtTime(mode === 'piep' ? 1750 : mode === 'terror' ? 1500 : 1150, startTime);
-  zaagFilter.Q.setValueAtTime(mode === 'piep' ? 3.2 : 1.8, startTime);
+  if (mode === 'zaag') {
+    zaagFilter.type = 'lowpass';
+    zaagFilter.frequency.setValueAtTime(1600, startTime);
+    zaagFilter.frequency.exponentialRampToValueAtTime(260, startTime + duration * 0.9);
+    zaagFilter.Q.setValueAtTime(2.2, startTime);
+  } else {
+    zaagFilter.type = mode === 'piep' ? 'bandpass' : 'highpass';
+    zaagFilter.frequency.setValueAtTime(mode === 'piep' ? 2000 : 280, startTime);
+    zaagFilter.frequency.exponentialRampToValueAtTime(mode === 'piep' ? 950 : 140, startTime + duration * 0.85);
+    zaagFilter.Q.setValueAtTime(mode === 'piep' ? 3.2 : 1.4, startTime);
+  }
 
   const zaagGain = ctx.createGain();
-  const zaagLevel = mode === 'piep' ? zaag * 0.45 : zaag * 0.78;
-  zaagGain.gain.setValueAtTime(Math.max(0.001, zaagLevel), startTime);
-  zaagGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.92);
+  const zaagAmt = Math.max(0.001, zaag * (mode === 'piep' ? 0.7 : 0.92));
+  zaagGain.gain.setValueAtTime(zaagAmt, startTime);
+  zaagGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.95);
 
   const shaper = ctx.createWaveShaper();
   shaper.curve = makeDistortionCurve(drive, mode);
@@ -684,27 +879,27 @@ function triggerUptempoKick(ctx, dest, params, startTime, trackIdx = null) {
 
   const masterGain = ctx.createGain();
   masterGain.gain.setValueAtTime(0.001, startTime);
-  masterGain.gain.linearRampToValueAtTime(0.96, startTime + 0.003);
-  masterGain.gain.setValueAtTime(0.92, startTime + Math.max(0.05, duration * 0.62));
+  masterGain.gain.linearRampToValueAtTime(0.98, startTime + 0.002);
+  masterGain.gain.setValueAtTime(0.92, startTime + Math.max(0.04, duration * 0.65));
   masterGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-  tokOsc.connect(shaper);
+  bodyOsc.connect(shaper);
   zaagOsc.connect(zaagFilter);
   zaagFilter.connect(zaagGain);
   zaagGain.connect(shaper);
   shaper.connect(masterGain);
   masterGain.connect(dest);
 
-  tokOsc.start(startTime);
+  bodyOsc.start(startTime);
   zaagOsc.start(startTime);
-  tokOsc.stop(startTime + duration + 0.02);
+  bodyOsc.stop(startTime + duration + 0.02);
   zaagOsc.stop(startTime + duration + 0.02);
 
   registerVoice(trackIdx, () => {
     try {
       masterGain.gain.cancelScheduledValues(ctx.currentTime);
       masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      tokOsc.stop();
+      bodyOsc.stop();
       zaagOsc.stop();
     } catch (e) {}
   });
@@ -747,6 +942,12 @@ function downloadHardtekkKick() {
     (ctx, dest) => triggerKick(ctx, dest, p, 0));
 }
 
+function downloadBass() {
+  const p = getBassParams();
+  renderAndDownload(p.duration + 0.05, `SVENTEKK_${p.mode}_Bass_${p.freq}Hz.wav`,
+    (ctx, dest) => triggerBass(ctx, dest, p, 0));
+}
+
 function downloadHatRoll() {
   const hits = parseInt(document.getElementById('hat_hits').value, 10);
   const bpm = parseFloat(document.getElementById('bpm').value);
@@ -765,8 +966,8 @@ function downloadMelody() {
   const totalDur = notes.length * stepSec + rel + 0.75;
 
   renderAndDownload(totalDur, `SVENTEKK_Rave_Phrase_${bpm}BPM.wav`, (ctx, dest) => {
-    const echoBus = getSharedEchoBus(ctx, dest, stepSec);
-    notes.forEach((f, idx) => triggerLeadNote(ctx, echoBus, f, stepSec * gate, idx * stepSec));
+    const chain = createEchoChain(ctx, dest, stepSec);
+    notes.forEach((f, idx) => triggerLeadNote(ctx, chain.input, f, stepSec * gate, idx * stepSec));
   });
 }
 
@@ -792,50 +993,69 @@ function downloadFullSequencer() {
   const notes = getActiveMelodyFrequencies();
   const hardParams = getHardtekkParams();
   const upParams = getUptempoParams();
+  const bassParams = getBassParams();
   const snareParams = getSnareParams();
 
   const totalDur = totalSteps * stepSec + Math.max(0.8, rel + 0.6);
 
   renderAndDownload(totalDur, `SVENTEKK_Full_Loop_${bars}Bars_${bpm}BPM.wav`, (ctx, dest) => {
-    const echoBus = getSharedEchoBus(ctx, dest, stepSec);
+    const out0 = getTrackOut(ctx, dest, 0);
+    const out1 = getTrackOut(ctx, dest, 1);
+    const out2 = getTrackOut(ctx, dest, 2);
+    const out3 = getTrackOut(ctx, dest, 3);
+    const out4 = getTrackOut(ctx, dest, 4);
+    const out5 = getTrackOut(ctx, dest, 5);
+    const chain5 = createEchoChain(ctx, out5, stepSec);
 
     for (let s = 0; s < totalSteps; s++) {
       const t = s * stepSec;
       const laneStep = s % 16;
 
       if (sequenceGrid[0][laneStep]) {
-        if (bpm >= 200) triggerUptempoKick(ctx, dest, upParams, t);
-        else triggerKick(ctx, dest, hardParams, t);
+        triggerKick(ctx, out0, hardParams, t);
       }
       if (sequenceGrid[1][laneStep]) {
-        triggerSnare(ctx, dest, snareParams, t);
+        triggerUptempoKick(ctx, out1, upParams, t);
       }
       if (sequenceGrid[2][laneStep]) {
-        triggerHiHat(ctx, dest, t, laneStep % 4 === 2);
+        triggerBass(ctx, out2, bassParams, t);
       }
-      if (sequenceGrid[3][laneStep] && notes.length > 0) {
+      if (sequenceGrid[3][laneStep]) {
+        triggerSnare(ctx, out3, snareParams, t);
+      }
+      if (sequenceGrid[4][laneStep]) {
+        triggerHiHat(ctx, out4, t, laneStep % 4 === 2);
+      }
+      if (sequenceGrid[5][laneStep] && notes.length > 0) {
         const freq = notes[s % notes.length];
-        triggerLeadNote(ctx, echoBus, freq, stepSec * 1.4 * gate, t);
+        triggerLeadNote(ctx, chain5.input, freq, stepSec * 1.4 * gate, t);
       }
     }
   });
 }
 
-function playHardtekkKick() {
+async function playHardtekkKick() {
   if (!requireLoginOnly()) return;
-  const ctx = getAudioCtx();
+  const ctx = await ensureAudioReady();
   triggerKick(ctx, getMasterOut(), getHardtekkParams(), ctx.currentTime, 0);
   setStatus(`PLAYING: ${KICK_PRESETS[activeKickMode].label}`);
 }
 
-function playHatRoll() {
+async function playBass() {
   if (!requireLoginOnly()) return;
-  const ctx = getAudioCtx();
+  const ctx = await ensureAudioReady();
+  triggerBass(ctx, getMasterOut(), getBassParams(), ctx.currentTime, 2);
+  setStatus(`PLAYING: ${BASS_PRESETS[activeBassMode].label}`);
+}
+
+async function playHatRoll() {
+  if (!requireLoginOnly()) return;
+  const ctx = await ensureAudioReady();
   const hits = parseInt(document.getElementById('hat_hits').value, 10);
   const bpm = parseFloat(document.getElementById('bpm').value);
   const stepSec = (60 / bpm) / 4;
   for (let i = 0; i < hits; i++) {
-    triggerHiHat(ctx, getMasterOut(), ctx.currentTime + i * stepSec, i === hits - 1, 2);
+    triggerHiHat(ctx, getMasterOut(), ctx.currentTime + i * stepSec, i === hits - 1, 4);
   }
   setStatus(`PLAYING: ${hits}x HAT ROLL`);
 }
@@ -853,7 +1073,7 @@ function scheduleMelodyPass(sessionId) {
   const echoBus = getSharedEchoBus(ctx, dest, stepSec);
 
   for (let idx = 0; idx < notes.length; idx++) {
-    triggerLeadNote(ctx, echoBus, notes[idx], stepSec * gate, now + idx * stepSec, 3);
+    triggerLeadNote(ctx, echoBus, notes[idx], stepSec * gate, now + idx * stepSec, 5);
   }
 
   setStatus(`PLAYING: ${notes.length}-NOTE RAVE PHRASE`);
@@ -865,12 +1085,9 @@ function scheduleMelodyPass(sessionId) {
   }, notes.length * stepSec * 1000);
 }
 
-function playMelody() {
+async function playMelody() {
   if (!requireLoginOnly()) return;
-  const ctx = getAudioCtx();
-  if (ctx.state === 'suspended') {
-    ctx.resume();
-  }
+  await ensureAudioReady();
   melodySessionId += 1;
   const currentSession = melodySessionId;
   if (melodyLoopTimer) {
@@ -880,18 +1097,18 @@ function playMelody() {
   scheduleMelodyPass(currentSession);
 }
 
-function playSnare() {
+async function playSnare() {
   if (!requireLoginOnly()) return;
-  const ctx = getAudioCtx();
+  const ctx = await ensureAudioReady();
   const p = getSnareParams();
-  triggerSnare(ctx, getMasterOut(), p, ctx.currentTime, 1);
+  triggerSnare(ctx, getMasterOut(), p, ctx.currentTime, 3);
   setStatus(`PLAYING: ${SNARE_PRESETS[activeSnareMode].label}`);
 }
 
-function playUptempoKick() {
+async function playUptempoKick() {
   if (!requireLoginOnly()) return;
-  const ctx = getAudioCtx();
-  triggerUptempoKick(ctx, getMasterOut(), getUptempoParams(), ctx.currentTime, 0);
+  const ctx = await ensureAudioReady();
+  triggerUptempoKick(ctx, getMasterOut(), getUptempoParams(), ctx.currentTime, 1);
   setStatus(`PLAYING: ${UPTEMPO_PRESETS[activeUptempoMode].label}`);
 }
 
@@ -903,11 +1120,40 @@ function randomizeMelody() {
   playMelody();
 }
 
+function getDownloadCount() {
+  try {
+    return parseInt(localStorage.getItem(DOWNLOAD_COUNT_KEY) || '0', 10) || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function updateDownloadCounterUI() {
+  const el = document.getElementById('wav-download-count');
+  if (el) el.innerText = String(getDownloadCount());
+}
+
+function incrementDownloadCounter() {
+  const next = getDownloadCount() + 1;
+  try {
+    localStorage.setItem(DOWNLOAD_COUNT_KEY, String(next));
+  } catch (e) {}
+  updateDownloadCounterUI();
+  return next;
+}
+
 async function renderAndDownload(durationSec, filename, renderFn) {
-  if (!consumeExportCredit()) return;
+  if (!(await consumeExportCredit())) return;
   const sampleRate = 44100;
   const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * durationSec), sampleRate);
-  renderFn(offlineCtx, offlineCtx.destination);
+  const limiter = offlineCtx.createDynamicsCompressor();
+  limiter.threshold.setValueAtTime(-3.0, 0);
+  limiter.knee.setValueAtTime(2.0, 0);
+  limiter.ratio.setValueAtTime(16.0, 0);
+  limiter.attack.setValueAtTime(0.002, 0);
+  limiter.release.setValueAtTime(0.08, 0);
+  limiter.connect(offlineCtx.destination);
+  renderFn(offlineCtx, limiter);
   const renderedBuffer = await offlineCtx.startRendering();
   const wavBlob = audioBufferToWav(renderedBuffer);
   const url = URL.createObjectURL(wavBlob);
@@ -919,13 +1165,14 @@ async function renderAndDownload(durationSec, filename, renderFn) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   setStatus('EXPORTED: ' + filename);
+  incrementDownloadCounter();
 }
 
 /* =========================================================================
    5. SEQUENZER, SAMPLE-LIBRARY & START
    ========================================================================= */
 function clearSequencer() {
-  for (let t = 0; t < 4; t++) sequenceGrid[t].fill(0);
+  for (let t = 0; t < sequenceGrid.length; t++) sequenceGrid[t].fill(0);
   renderSequencerUI();
 }
 
@@ -972,47 +1219,58 @@ function loadPresetPattern(type) {
     setControlValue('bpm', 'num-bpm', 180);
     document.getElementById('header-bpm').innerText = 180;
     setKickMode('hard');
+    setBassMode('offbeat');
     setSnareMode('snare');
     sequenceGrid[0] = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0];
-    sequenceGrid[1] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1];
-    sequenceGrid[2] = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1];
-    sequenceGrid[3] = [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0];
+    sequenceGrid[1] = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+    sequenceGrid[2] = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
+    sequenceGrid[3] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1];
+    sequenceGrid[4] = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,1,1];
+    sequenceGrid[5] = [1,0,1,1, 0,1,0,1, 1,0,1,1, 0,1,1,0];
   } else {
     setControlValue('bpm', 'num-bpm', 210);
     document.getElementById('header-bpm').innerText = 210;
     setUptempoMode('zaag');
+    setBassMode('sub');
     setSnareMode('clap');
-    sequenceGrid[0] = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,1,1,1];
-    sequenceGrid[1] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0];
-    sequenceGrid[2] = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,1,1,1];
-    sequenceGrid[3] = [1,1,0,1, 1,0,1,0, 1,1,0,1, 1,1,1,0];
+    sequenceGrid[0] = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+    sequenceGrid[1] = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,1,1,1];
+    sequenceGrid[2] = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,0,0];
+    sequenceGrid[3] = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0];
+    sequenceGrid[4] = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,1,1,1];
+    sequenceGrid[5] = [1,1,0,1, 1,0,1,0, 1,1,0,1, 1,1,1,0];
   }
   renderSequencerUI();
 }
 
 function playStepSounds(step) {
   const ctx = getAudioCtx();
-  const dest = getMasterOut();
+  const baseDest = getMasterOut();
   const now = ctx.currentTime;
   const bpm = parseFloat(document.getElementById('bpm').value);
   const stepSec = (60 / bpm) / 4;
   const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.95);
   const notes = getActiveMelodyFrequencies();
-  const echoBus = getSharedEchoBus(ctx, dest, stepSec);
 
   if (sequenceGrid[0][step]) {
-    if (bpm >= 200) triggerUptempoKick(ctx, dest, getUptempoParams(), now, 0);
-    else triggerKick(ctx, dest, getHardtekkParams(), now, 0);
+    triggerKick(ctx, getTrackOut(ctx, baseDest, 0), getHardtekkParams(), now, 0);
   }
   if (sequenceGrid[1][step]) {
-    triggerSnare(ctx, dest, getSnareParams(), now, 1);
+    triggerUptempoKick(ctx, getTrackOut(ctx, baseDest, 1), getUptempoParams(), now, 1);
   }
   if (sequenceGrid[2][step]) {
-    triggerHiHat(ctx, dest, now, step % 4 === 2, 2);
+    triggerBass(ctx, getTrackOut(ctx, baseDest, 2), getBassParams(), now, 2);
   }
-  if (sequenceGrid[3][step] && notes.length > 0) {
+  if (sequenceGrid[3][step]) {
+    triggerSnare(ctx, getTrackOut(ctx, baseDest, 3), getSnareParams(), now, 3);
+  }
+  if (sequenceGrid[4][step]) {
+    triggerHiHat(ctx, getTrackOut(ctx, baseDest, 4), now, step % 4 === 2, 4);
+  }
+  if (sequenceGrid[5][step] && notes.length > 0) {
+    const echoBus = getMelodyTrackEchoBus(ctx, baseDest, stepSec);
     const freq = notes[seqMelodyStepIndex % notes.length];
-    triggerLeadNote(ctx, echoBus, freq, stepSec * gate, now, 3);
+    triggerLeadNote(ctx, echoBus, freq, stepSec * 1.4 * gate, now, 5);
   }
   seqMelodyStepIndex += 1;
 }
@@ -1051,6 +1309,7 @@ function renderSampleLibrary() {
       else if (item.generator === 'industrial') { setKickMode('industrial'); playHardtekkKick(); }
       else if (item.generator === 'uptempo_zaag') { setUptempoMode('zaag'); playUptempoKick(); }
       else if (item.generator === 'uptempo_piep') { setUptempoMode('piep'); playUptempoKick(); }
+      else if (item.generator === 'bass') { setBassMode('sub'); playBass(); }
       else playMelody();
     };
 
@@ -1063,6 +1322,7 @@ function renderSampleLibrary() {
       else if (item.generator === 'industrial') { setKickMode('industrial'); downloadHardtekkKick(); }
       else if (item.generator === 'uptempo_zaag') { setUptempoMode('zaag'); downloadUptempoKick(); }
       else if (item.generator === 'uptempo_piep') { setUptempoMode('piep'); downloadUptempoKick(); }
+      else if (item.generator === 'bass') { setBassMode('sub'); downloadBass(); }
       else downloadMelody();
     };
 
@@ -1077,7 +1337,7 @@ function renderSampleLibrary() {
 function renderSequencerUI() {
   const container = document.getElementById('sequencer-rows');
   container.innerHTML = '';
-  const trackNames = ['01 KICK', '02 SNARE', '03 HI-HAT', '04 MELODY'];
+  const trackNames = ['01 KICK', '02 UPTEMPO', '03 BASS', '04 SNARE', '05 HI-HAT', '06 MELODY'];
 
   trackNames.forEach((name, tIdx) => {
     const row = document.createElement('div');
@@ -1090,6 +1350,37 @@ function renderSequencerUI() {
     label.className = 'seq-label';
     label.innerText = name;
 
+    const rightControls = document.createElement('div');
+    rightControls.className = 'seq-track-meta';
+
+    const volWrap = document.createElement('div');
+    volWrap.className = 'seq-vol-wrap';
+    volWrap.title = 'Spur-Lautstärke';
+
+    const volSlider = document.createElement('input');
+    volSlider.type = 'range';
+    volSlider.className = 'seq-vol-slider';
+    volSlider.min = '0';
+    volSlider.max = '1.3';
+    volSlider.step = '0.05';
+    volSlider.value = String(trackVolumes[tIdx]);
+
+    const volVal = document.createElement('span');
+    volVal.className = 'seq-vol-val';
+    volVal.innerText = `${Math.round(trackVolumes[tIdx] * 100)}%`;
+
+    volSlider.oninput = () => {
+      const v = parseFloat(volSlider.value);
+      trackVolumes[tIdx] = v;
+      volVal.innerText = `${Math.round(v * 100)}%`;
+      if (tIdx === 5 && melodyEchoBus && melodyEchoBus.trackGain) {
+        melodyEchoBus.trackGain.gain.setValueAtTime(Math.max(0, Math.min(1.5, v)), getAudioCtx().currentTime);
+      }
+    };
+
+    volWrap.appendChild(volSlider);
+    volWrap.appendChild(volVal);
+
     const vBtn = document.createElement('button');
     vBtn.type = 'button';
     const isPoly = trackVoiceModes[tIdx] === 'poly';
@@ -1100,8 +1391,11 @@ function renderSequencerUI() {
       renderSequencerUI();
     };
 
+    rightControls.appendChild(volWrap);
+    rightControls.appendChild(vBtn);
+
     controls.appendChild(label);
-    controls.appendChild(vBtn);
+    controls.appendChild(rightControls);
     row.appendChild(controls);
 
     const stepsWrap = document.createElement('div');
@@ -1115,14 +1409,14 @@ function renderSequencerUI() {
       btn.innerText = s + 1;
       if (sequenceGrid[tIdx][s]) {
         btn.classList.add('on');
-        if (tIdx === 0) btn.classList.add('cyan');
-        if (tIdx === 3) btn.classList.add('purple');
+        if (tIdx === 0 || tIdx === 2) btn.classList.add('cyan');
+        if (tIdx === 5) btn.classList.add('purple');
       }
       btn.onclick = () => {
         sequenceGrid[tIdx][s] = sequenceGrid[tIdx][s] ? 0 : 1;
         btn.classList.toggle('on');
-        if (tIdx === 0) btn.classList.toggle('cyan', !!sequenceGrid[tIdx][s]);
-        if (tIdx === 3) btn.classList.toggle('purple', !!sequenceGrid[tIdx][s]);
+        if (tIdx === 0 || tIdx === 2) btn.classList.toggle('cyan', !!sequenceGrid[tIdx][s]);
+        if (tIdx === 5) btn.classList.toggle('purple', !!sequenceGrid[tIdx][s]);
       };
       stepsWrap.appendChild(btn);
     }
@@ -1134,7 +1428,7 @@ function renderSequencerUI() {
 function runSequencerLoop() {
   if (!isPlaying) return;
   document.querySelectorAll('.step-btn.now').forEach(el => el.classList.remove('now'));
-  for (let t = 0; t < 4; t++) {
+  for (let t = 0; t < sequenceGrid.length; t++) {
     const el = document.getElementById(`step-${t}-${currentStep}`);
     if (el) el.classList.add('now');
   }
@@ -1144,7 +1438,7 @@ function runSequencerLoop() {
   stepTimer = setTimeout(runSequencerLoop, ((60 / bpm) / 4) * 1000);
 }
 
-function toggleSequencer() {
+async function toggleSequencer() {
   const btn = document.getElementById('btn-seq-play');
   if (isPlaying) {
     isPlaying = false;
@@ -1155,7 +1449,7 @@ function toggleSequencer() {
   } else {
     if (!requireLoginOnly()) return;
     stopMelodyPreview();
-    getAudioCtx();
+    await ensureAudioReady();
     isPlaying = true;
     currentStep = 0;
     seqMelodyStepIndex = 0;
@@ -1226,4 +1520,5 @@ buildMelodyNotes();
 renderSequencerUI();
 renderSampleLibrary();
 initFixNotesBox();
+updateDownloadCounterUI();
 loadSession();

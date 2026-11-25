@@ -36,13 +36,13 @@
         <input type="password" id="auth-password" maxlength="64" autocomplete="current-password" placeholder="••••••••">
       </div>
 
-      <div class="form-field" id="vip-field" style="display: none;">
-        <label>RANG / ZUGANGSCODE (OPTIONAL)</label>
-        <input type="password" id="auth-vipcode" maxlength="32" placeholder="Leer lassen für Free-Account">
+      <div class="form-field" id="role-code-field" style="display: none;">
+        <label>TESTER-CODE (OPTIONAL)</label>
+        <input type="password" id="auth-rolecode" maxlength="32" placeholder="Leer lassen für Free-Account">
       </div>
 
       <div class="security-note">
-        🔒 <strong>Cloud-Sync:</strong> Passwörter werden per SHA-256 gehasht.
+        🔒 <strong>Sicherer Cloud-Login:</strong> Verschlüsselte Session &amp; Passwortschutz über Supabase Auth.
       </div>
 
       <div id="auth-error" class="auth-msg"></div>
@@ -50,22 +50,22 @@
     </div>
   </div>
 
-  <div id="vip-modal" class="modal-backdrop">
-    <div class="modal-card" style="border-color: rgba(168, 85, 247, 0.5);">
-      <button type="button" class="modal-close" onclick="closeVipModal()">&times;</button>
-      <div class="pill-badge" style="color: #d8b4fe; border-color: rgba(168, 85, 247, 0.45);">RANG AKTIVIEREN</div>
-      <h2 style="font-size: 1.35rem; margin-bottom: 6px;">Zugangscode eingeben</h2>
+  <div id="role-modal" class="modal-backdrop">
+    <div class="modal-card" style="border-color: rgba(0, 240, 255, 0.45);">
+      <button type="button" class="modal-close" onclick="closeRoleModal()">&times;</button>
+      <div class="pill-badge">TESTER AKTIVIEREN</div>
+      <h2 style="font-size: 1.35rem; margin-bottom: 6px;">Tester-Code eingeben</h2>
       <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 14px;">
-        Schalte deinen Account für VIP oder Tester frei.
+        Schalte deinen Account als Tester für unbegrenzte .WAV-Exporte frei.
       </p>
       <div class="form-field">
-        <label>CODE</label>
-        <input type="password" id="vip-code-input" maxlength="40" placeholder="Code eingeben...">
+        <label>TESTER-CODE</label>
+        <input type="password" id="role-code-input" maxlength="40" placeholder="Code eingeben...">
       </div>
-      <div id="vip-modal-msg" class="auth-msg"></div>
+      <div id="role-modal-msg" class="auth-msg"></div>
       <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-ghost" onclick="closeVipModal()">Abbrechen</button>
-        <button type="button" id="btn-vip-submit" class="btn btn-purple" style="flex: 1;" onclick="submitRoleCode()">Aktivieren</button>
+        <button type="button" class="btn btn-ghost" onclick="closeRoleModal()">Abbrechen</button>
+        <button type="button" id="btn-role-submit" class="btn btn-cyan" style="flex: 1;" onclick="submitRoleCode()">Aktivieren</button>
       </div>
     </div>
   </div>
@@ -74,19 +74,20 @@
     <div class="modal-card" style="border-color: rgba(255, 85, 0, 0.45); text-align: center;">
       <button type="button" class="modal-close" onclick="closeLimitModal()">&times;</button>
       <div class="pill-badge" style="color: #ff8547; border-color: rgba(255, 85, 0, 0.4);">FREE LIMIT ERREICHT</div>
-      <h2 style="font-size: 1.35rem; margin-bottom: 8px;">5 / 5 Gratis-Exporte verbraucht</h2>
-      <p style="color: var(--text-dim); font-size: 0.88rem; margin-bottom: 16px;">
-        Dein kostenloses Tageslimit wird automatisch in 24 Stunden zurückgesetzt:
+      <h2 style="font-size: 1.3rem; margin-bottom: 8px;">Keine Gratis-.WAV Downloads mehr übrig</h2>
+      <p style="color: var(--text-dim); font-size: 0.88rem; margin-bottom: 14px;">
+        Deine Gratis-Exporte sind aufgebraucht. Folg mir auf Social Media und schreib mir direkt, wenn du Fragen hast oder mehr brauchst:
       </p>
 
-      <div style="background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 18px;">
-        <div style="font-size: 0.75rem; color: var(--text-dim); font-family: monospace;">NÄCHSTER RESET IN</div>
-        <div id="modal-countdown" style="font-family: monospace; font-size: 1.5rem; font-weight: 800; color: var(--cyan);">23:59:59</div>
+      <div class="social-row" style="justify-content: center; margin-bottom: 16px;">
+        <a class="nav-pill primary" href="https://www.tiktok.com/@sventekk07" target="_blank" rel="noopener noreferrer">TikTok @sventekk07</a>
+        <a class="nav-pill" href="https://www.instagram.com/sventekk07/" target="_blank" rel="noopener noreferrer">Instagram @sventekk07</a>
+        <a class="nav-pill" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud</a>
       </div>
 
       <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn btn-ghost" onclick="closeLimitModal()">Okay</button>
-        <button type="button" class="btn btn-purple" style="flex: 1;" onclick="openVipModal()">Code eingeben</button>
+        <button type="button" class="btn btn-cyan" style="flex: 1;" onclick="jumpToFeedbackFromLimit()">Mir schreiben</button>
+        <button type="button" class="btn btn-ghost" onclick="closeLimitModal()">Schließen</button>
       </div>
     </div>
   </div>
@@ -110,9 +111,15 @@
       </div>
 
       <div class="user-info-group">
+        <div class="chip orange" id="dev-download-counter-box" style="display: none;">
+          DEV .WAV EXPORTE: <span id="wav-download-count">0</span>
+        </div>
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
-        <button type="button" id="btn-vip-code" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem;" onclick="openVipModal()">
-          Rang-Code
+        <a href="korg-live.html" id="btn-view-korg" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">
+          KORG LIVE
+        </a>
+        <button type="button" id="btn-role-code" class="btn btn-ghost" style="padding: 8px 12px; font-size: 0.8rem;" onclick="openRoleModal()">
+          Tester-Code
         </button>
         <button type="button" id="btn-open-login" class="btn btn-cyan" style="padding: 8px 14px; font-size: 0.8rem;" onclick="openAuthModal('login')">
           Anmelden / Registrieren
@@ -123,539 +130,641 @@
       </div>
     </div>
 
-    <!-- HERO HEADER -->
-    <header class="hero-bar">
-      <div>
-        <div class="pill-badge">
-          <span class="live-dot"></span> SVENTEKK AUDIO LAB
-          <span class="version-tag" id="header-version-badge">VERSION 0.2</span>
-        </div>
-        <h1>Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio</h1>
-        <p class="hero-desc">
-          Synthesizer-Werkstatt für eigene Hardtekk- &amp; Uptempo-Kicks, Snares/Claps/Rims, Hat-Rolls und komplette Rave-Melodie-Phrasen mit exakter Zahleneingabe.
-        </p>
+    <!-- STUDIO HAUPTANSICHT -->
+    <div id="studio-page-view">
 
-        <div class="studio-notice-box">
-          <strong>Wofür ist diese Website?</strong> Hier werden <strong>keine fertigen KI-Lieder</strong> generiert! Du baust dir hier per Echtzeit-Synthese eigene Kicks, Snares, Melodie-Phrasen und komplette Pattern-Loops als <strong>.WAV-Samples</strong>, um sie danach auf deiner <strong>Korg Electribe 2</strong> oder in <strong>FL Studio</strong> zu arrangieren, zu schneiden und weiterzubearbeiten.
-        </div>
-      </div>
-
-      <div class="studio-status-box">
-        <div class="status-top">
-          <span>WEB AUDIO ENGINE + LIMITER</span>
-          <span>KEINE KI &middot; 100% SYNTHESE</span>
-        </div>
-        <div class="status-display">
-          <span id="studio-status-text">BEREIT ZUM SCHRAUBEN</span>
-          <span class="bpm-readout"><span id="header-bpm">180</span> BPM</span>
-        </div>
-        <div class="social-row">
-          <a class="nav-pill primary" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud</a>
-          <a class="nav-pill secondary" href="https://www.tiktok.com/@sventekk07" target="_blank" rel="noopener noreferrer">TikTok @sventekk07</a>
-          <a class="nav-pill secondary" href="https://www.instagram.com/sventekk07/" target="_blank" rel="noopener noreferrer">Insta @sventekk07</a>
-        </div>
-      </div>
-    </header>
-
-    <!-- 01: SYNTH GENERATOREN -->
-    <div class="section-head">
-      <h2 class="section-title"><span class="section-num">01</span> Multi-Genre Sound-Synthese Module</h2>
-    </div>
-
-    <div class="modules-grid">
-      <!-- Modul 1: Hardtekk & Rave Kick -->
-      <div class="synth-card">
+      <!-- HERO HEADER -->
+      <header class="hero-bar">
         <div>
-          <div class="card-top">
-            <h3>Hardtekk &amp; Rave Kick</h3>
-            <span class="chip" id="kick-mode-badge">HARD KICK</span>
+          <div class="pill-badge">
+            <span class="live-dot"></span> SVENTEKK AUDIO LAB
+            <span class="version-tag" id="header-version-badge">VERSION 0.3</span>
           </div>
-          <p class="card-sub">Wähle den Kick-Stil oder tippe exakte Werte direkt in die Zahlenfelder.</p>
+          <h1>Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio</h1>
+          <p class="hero-desc">
+            Synthesizer-Werkstatt für eigene Hardtekk- &amp; Uptempo-Kicks, Basslines, Snares/Claps/Rims, Hat-Rolls und komplette Rave-Melodie-Phrasen mit exakter Zahleneingabe.
+          </p>
 
-          <div class="style-pills">
-            <button type="button" class="style-btn" data-mode="soft" onclick="setKickMode('soft')">Soft Kick</button>
-            <button type="button" class="style-btn active" data-mode="hard" onclick="setKickMode('hard')">Hard Kick</button>
-            <button type="button" class="style-btn" data-mode="industrial" onclick="setKickMode('industrial')">Industrial</button>
-            <button type="button" class="style-btn" data-mode="gabber" onclick="setKickMode('gabber')">Gabber</button>
-            <button type="button" class="style-btn" data-mode="schranz" onclick="setKickMode('schranz')">Schranz</button>
-            <button type="button" class="style-btn" data-mode="hardtechno" onclick="setKickMode('hardtechno')">Hard Techno</button>
-          </div>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>
-                <span>Start-Frequenz (Klick)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-start" min="90" max="900" step="1" value="240"> Hz</span>
-              </label>
-              <input type="range" id="start_hz" min="90" max="900" step="1" value="240">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>End-Frequenz (Subbass)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-end" min="25" max="110" step="1" value="45"> Hz</span>
-              </label>
-              <input type="range" id="end_hz" min="25" max="110" step="1" value="45">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Punch-Kurve (Knackigkeit)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-punch" min="2" max="20" step="1" value="6"></span>
-              </label>
-              <input type="range" id="kick_punch" min="2" max="20" step="1" value="6">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Sub-Tail / Rumble-Dicke</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-tail" min="0.2" max="3.0" step="0.1" value="1.0"></span>
-              </label>
-              <input type="range" id="kick_tail" min="0.2" max="3.0" step="0.1" value="1.0">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Crunch / Metall-Anteil</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-crunch" min="0" max="1.0" step="0.05" value="0.15"></span>
-              </label>
-              <input type="range" id="kick_crunch" min="0" max="1.0" step="0.05" value="0.15">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Drive (Verzerrung)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-drive" min="1" max="35" step="0.5" value="5.5"></span>
-              </label>
-              <input type="range" id="drive" min="1" max="35" step="0.5" value="5.5">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Länge</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-dauer" min="0.15" max="1.5" step="0.05" value="0.5"> s</span>
-              </label>
-              <input type="range" id="dauer" min="0.15" max="1.5" step="0.05" value="0.5">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-cyan" onclick="playHardtekkKick()">Anhören</button>
-          <button type="button" class="btn btn-ghost" onclick="downloadHardtekkKick()">.WAV Export</button>
-        </div>
-      </div>
-
-      <!-- Modul 2: Uptempo Piep / Zaag Kick -->
-      <div class="synth-card orange-theme">
-        <div>
-          <div class="card-top">
-            <h3>Uptempo Piep / Zaag Kick</h3>
-            <span class="chip orange" id="uptempo-mode-badge">ZAAG KICK</span>
-          </div>
-          <p class="card-sub">Eigene Uptempo-Engine mit Piep-Tok, Sägezahn-Zaag &amp; Terror-Clipper.</p>
-
-          <div class="style-pills">
-            <button type="button" class="style-btn up-style" data-upmode="piep" onclick="setUptempoMode('piep')">Piep Kick</button>
-            <button type="button" class="style-btn up-style active" data-upmode="zaag" onclick="setUptempoMode('zaag')">Zaag Kick</button>
-            <button type="button" class="style-btn up-style" data-upmode="terror" onclick="setUptempoMode('terror')">Terror 230+</button>
-          </div>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>
-                <span>Piep-Punch (Tok)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-start" min="250" max="1400" step="5" value="640"> Hz</span>
-              </label>
-              <input type="range" id="up_start" min="250" max="1400" step="5" value="640">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Bass-Bauch (Body)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-end" min="45" max="130" step="1" value="68"> Hz</span>
-              </label>
-              <input type="range" id="up_end" min="45" max="130" step="1" value="68">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Zaag-Säge (Oberton)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-zaag" min="0" max="1.0" step="0.05" value="0.72"></span>
-              </label>
-              <input type="range" id="up_zaag" min="0" max="1.0" step="0.05" value="0.72">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Tok-Snap (Geschwindigkeit)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-snap" min="15" max="95" step="1" value="42"> ms</span>
-              </label>
-              <input type="range" id="up_snap" min="15" max="95" step="1" value="42">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Clip-Drive (Härte)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-drive" min="5" max="40" step="1" value="24"></span>
-              </label>
-              <input type="range" id="up_drive" min="5" max="40" step="1" value="24">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Länge</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-up-dauer" min="0.15" max="0.7" step="0.01" value="0.32"> s</span>
-              </label>
-              <input type="range" id="up_dauer" min="0.15" max="0.7" step="0.01" value="0.32">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-orange" onclick="playUptempoKick()">Anhören</button>
-          <button type="button" class="btn btn-ghost" onclick="downloadUptempoKick()">.WAV Export</button>
-        </div>
-      </div>
-
-      <!-- Modul 3: Snares, Claps & Hi-Hat Rolls -->
-      <div class="synth-card">
-        <div>
-          <div class="card-top">
-            <h3>Snares, Claps &amp; Hat-Rolls</h3>
-            <span class="chip" id="snare-mode-badge">TEKK SNARE</span>
-          </div>
-          <p class="card-sub">Snare-, Clap- und Rim-Synthese mit Filter, Drive &amp; 16tel-Hi-Hat Rolls.</p>
-
-          <div class="style-pills">
-            <button type="button" class="style-btn snare-style active" data-snaremode="snare" onclick="setSnareMode('snare')">Tekk Snare</button>
-            <button type="button" class="style-btn snare-style" data-snaremode="clap" onclick="setSnareMode('clap')">Rave Clap</button>
-            <button type="button" class="style-btn snare-style" data-snaremode="rim" onclick="setSnareMode('rim')">Industrial Rim</button>
-          </div>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>
-                <span>Snare-Ton (Pitch)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-snare-tone" min="110" max="520" step="1" value="210"> Hz</span>
-              </label>
-              <input type="range" id="snare_tone" min="110" max="520" step="1" value="210">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Snare-Länge (Decay)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-snare-len" min="0.06" max="0.75" step="0.02" value="0.24"> s</span>
-              </label>
-              <input type="range" id="snare_len" min="0.06" max="0.75" step="0.02" value="0.24">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Noise-Filter (Hochpass)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-snare-filter" min="400" max="4200" step="50" value="1100"> Hz</span>
-              </label>
-              <input type="range" id="snare_filter" min="400" max="4200" step="50" value="1100">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Snare-Drive (Härte)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-snare-drive" min="1" max="20" step="0.5" value="3.5"></span>
-              </label>
-              <input type="range" id="snare_drive" min="1" max="20" step="0.5" value="3.5">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Roll-Schläge</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-hat-hits" min="2" max="32" step="1" value="8"> x</span>
-              </label>
-              <input type="range" id="hat_hits" min="2" max="32" step="1" value="8">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-cyan" onclick="playSnare()">Snare</button>
-          <button type="button" class="btn btn-ghost" onclick="downloadSnare()">Snare .WAV</button>
-          <button type="button" class="btn btn-cyan" onclick="playHatRoll()">Hat-Roll</button>
-          <button type="button" class="btn btn-ghost" onclick="downloadHatRoll()">Roll .WAV</button>
-        </div>
-      </div>
-
-      <!-- Modul 4: Rave Melodien & Hook Lab -->
-      <div class="synth-card purple-theme">
-        <div>
-          <div class="card-top">
-            <h3>Rave Melodien &amp; Hook Lab</h3>
-            <span class="chip purple">KOMPLETTE PHRASE</span>
-          </div>
-          <p class="card-sub">Komplette Melodie-Phrasen über 1–8 Takte mit vollem Ausklang für Sampler &amp; DAW.</p>
-
-          <div class="select-row">
-            <div class="select-group">
-              <span>MELODIE-PATTERN</span>
-              <select id="melody_pattern" onchange="buildMelodyNotes()">
-                <option value="offbeat">1. Classic Rave Off-Beat</option>
-                <option value="staircase">2. Hardtekk Staircase</option>
-                <option value="frenzy">3. Uptempo Frenzy</option>
-                <option value="acid">4. Hypnotic Acid Roll</option>
-                <option value="anthem">5. Dark Trance Anthem</option>
-                <option value="octave">6. Octave Bounce Hook</option>
-                <option value="random">7. Random Rave Hook 🎲</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <span>TONART (SCALE)</span>
-              <select id="melody_scale" onchange="buildMelodyNotes()">
-                <option value="phrygian">E Phrygian (Hardtekk)</option>
-                <option value="aminor">A-Moll (Rave Classic)</option>
-                <option value="fminor">F-Moll (Dark Uptempo)</option>
-                <option value="dminor">D-Moll (Hardstyle)</option>
-                <option value="harmonic">G Harmonic Minor (Ostblock)</option>
-                <option value="cminor">C-Moll (Industrial)</option>
-                <option value="major">C-Dur (Euphoric Happy)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="select-row">
-            <div class="select-group">
-              <span>SYNTH-CHARAKTER</span>
-              <select id="melody_synth">
-                <option value="supersaw">SuperSaw Rave Lead</option>
-                <option value="acid303">Acid 303 Squelch</option>
-                <option value="screech">Screech FM Lead</option>
-                <option value="pluck">Pluck Trance Bell</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <span>MELODIE-LÄNGE (TAKTE)</span>
-              <select id="melody_bars">
-                <option value="1">1 Takt (8 Noten)</option>
-                <option value="2">2 Takte (16 Noten)</option>
-                <option value="4" selected>4 Takte (32 Noten / Komplett)</option>
-                <option value="8">8 Takte (64 Noten / Extended)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="sliders">
-            <div class="slider-item">
-              <label>
-                <span>Noten-Dauer / Gate (Länge pro Ton)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-mel-gate" min="0.25" max="1.6" step="0.05" value="0.95"> x</span>
-              </label>
-              <input type="range" id="melody_gate" min="0.25" max="1.6" step="0.05" value="0.95">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Ausklang / Release-Fahne</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-mel-rel" min="0.05" max="0.8" step="0.05" value="0.25"> s</span>
-              </label>
-              <input type="range" id="mel_release" min="0.05" max="0.8" step="0.05" value="0.25">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Filter-Cutoff (Helligkeit)</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-mel-cutoff" min="400" max="9500" step="50" value="3600"> Hz</span>
-              </label>
-              <input type="range" id="mel_cutoff" min="400" max="9500" step="50" value="3600">
-            </div>
-            <div class="slider-item">
-              <label>
-                <span>Detune / Rave-Breite</span>
-                <span class="num-unit"><input type="number" class="num-box" id="num-mel-detune" min="2" max="50" step="1" value="22"> ct</span>
-              </label>
-              <input type="range" id="mel_detune" min="2" max="50" step="1" value="22">
-            </div>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-purple" onclick="playMelody()">Komplette Phrase anhören</button>
-          <button type="button" class="btn btn-ghost" onclick="stopMelodyPreview()">■ Stop</button>
-          <button type="button" class="btn btn-ghost" onclick="randomizeMelody()">🎲 Neue Hook</button>
-          <button type="button" class="btn btn-ghost" onclick="downloadMelody()">Komplett .WAV</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 02: LIVE STEP SEQUENZER -->
-    <div class="section-head">
-      <h2 class="section-title"><span class="section-num">02</span> 16-Step Live Groovebox &amp; Kompletter Loop-Export</h2>
-    </div>
-
-    <div class="panel-box">
-      <div class="seq-header">
-        <div>
-          <h3 style="font-size: 1.1rem;">Pattern Sequenzer &amp; Voice Mode</h3>
-          <p style="font-size: 0.84rem; color: var(--text-dim);">Klicke auf <strong>MONO / POLY</strong> pro Spur, um Überlappungen zu steuern, oder exportiere den kompletten Loop am Stück.</p>
-        </div>
-        <div class="seq-tools">
-          <button type="button" id="btn-seq-play" class="btn btn-orange" style="min-width: 110px;" onclick="toggleSequencer()">▶ START</button>
-          <select id="seq_export_bars" style="width: auto;">
-            <option value="1">1 Takt (16 Steps)</option>
-            <option value="2">2 Takte (32 Steps)</option>
-            <option value="4" selected>4 Takte (64 Steps / Komplett)</option>
-            <option value="8">8 Takte (128 Steps / Full Drop)</option>
-          </select>
-          <button type="button" class="btn btn-cyan" onclick="downloadFullSequencer()">⬇ Kompletter Loop (.WAV)</button>
-          <button type="button" class="btn btn-ghost" onclick="loadPresetPattern('hardtekk')">Preset: Hardtekk</button>
-          <button type="button" class="btn btn-ghost" onclick="loadPresetPattern('uptempo')">Preset: Uptempo</button>
-          <button type="button" class="btn btn-ghost" onclick="clearSequencer()">Leeren</button>
-        </div>
-      </div>
-
-      <div style="margin-bottom: 18px; max-width: 380px;">
-        <div class="slider-item">
-          <label>
-            <span>Master Tempo</span>
-            <span class="num-unit"><input type="number" class="num-box" id="num-bpm" min="120" max="260" step="1" value="180"> BPM</span>
-          </label>
-          <input type="range" id="bpm" min="120" max="260" step="1" value="180">
-        </div>
-      </div>
-
-      <div id="sequencer-rows"></div>
-    </div>
-
-    <!-- 03: SAMPLE LIBRARY -->
-    <div class="section-head">
-      <h2 class="section-title"><span class="section-num">03</span> Sample-Library &amp; Hardware Workflow</h2>
-    </div>
-
-    <div class="panel-box">
-      <div class="library-header">
-        <div>
-          <h3 style="font-size: 1.1rem;">Eigene Audio-Clips &amp; Kicks vorhören</h3>
-          <p style="font-size: 0.84rem; color: var(--text-dim);">Lade eigene .WAV oder .MP3 Dateien direkt im Browser zum Gegenhören.</p>
-        </div>
-        <label class="upload-btn">
-          + Eigene WAV/MP3 laden
-          <input type="file" id="audio-uploader" accept="audio/wav,audio/mpeg,audio/ogg,audio/flac" multiple style="display:none" onchange="handleAudioUpload(event)">
-        </label>
-      </div>
-      <div id="sample-library-list" class="sample-grid"></div>
-    </div>
-
-    <!-- 04: WORKFLOW -->
-    <div class="section-head">
-      <h2 class="section-title"><span class="section-num">04</span> Korg Electribe 2 &amp; FL Studio Workflow</h2>
-    </div>
-
-    <div class="workflow-grid">
-      <div class="wf-step">
-        <div style="font-weight: 700; margin-bottom: 4px;">1. Synthese statt KI</div>
-        <p style="font-size: 0.84rem; color: var(--text-dim);">Hier werden keine KI-Tracks generiert – du formst eigene Kicks, Snares/Claps, Melodie-Phrasen und komplette Loops per Synthesizer.</p>
-      </div>
-      <div class="wf-step" style="border-left-color: var(--orange);">
-        <div style="font-weight: 700; margin-bottom: 4px;">2. Komplette .WAV-Datei exportieren</div>
-        <p style="font-size: 0.84rem; color: var(--text-dim);">Exportiere einzelne Sounds oder den kompletten Sequenzer-Loop inklusive Ausklang als 16-Bit .WAV.</p>
-      </div>
-      <div class="wf-step" style="border-left-color: var(--purple);">
-        <div style="font-weight: 700; margin-bottom: 4px;">3. Korg Electribe 2 &amp; FL Studio</div>
-        <p style="font-size: 0.84rem; color: var(--text-dim);">Lade die Samples in deine Korg Electribe 2 oder in FL Studio, um sie dort weiter zu arrangieren, zu verzerren und auszuarbeiten.</p>
-      </div>
-    </div>
-
-    <!-- 05: FEEDBACK & FIX-NOTIZBLOCK -->
-    <div class="section-head">
-      <h2 class="section-title"><span class="section-num">05</span> Feedback &amp; Offene Fixes</h2>
-      <span class="chip" id="feedback-version-chip">V 0.2</span>
-    </div>
-
-    <div class="modules-grid">
-      <!-- Linke Box: Offene Fixes & Bug-Notizen (lokal gespeichert) -->
-      <div class="panel-box">
-        <div class="card-top">
-          <h3>Offene Fixes &amp; Bug-Notizen</h3>
-          <span class="chip orange">LOKAL GESPEICHERT</span>
-        </div>
-        <p class="card-sub">Schreib hier alles rein, was noch gefixt oder geändert werden muss – bleibt automatisch im Browser gespeichert.</p>
-
-        <div class="form-field">
-          <label>NOCH ZU FIXEN / ÄNDERN</label>
-          <textarea id="dev-fix-notes" rows="6" placeholder="z.B.&#10;- Zaag-Kick noch schärfer machen&#10;- Snare-Clap Release testen&#10;- Sequenzer-Preset für 220 BPM"></textarea>
-        </div>
-
-        <div class="actions">
-          <button type="button" class="btn btn-orange" onclick="saveFixNotes()">Notizen speichern</button>
-          <button type="button" class="btn btn-ghost" onclick="clearFixNotes()">Leeren</button>
-        </div>
-        <div id="fix-notes-status" class="feedback-status"></div>
-      </div>
-
-      <!-- Rechte Box: Feedback Kasten -->
-      <div class="panel-box">
-        <div class="card-top">
-          <h3>Feedback &amp; Ideen-Kasten</h3>
-          <span class="chip">CLOUD</span>
-        </div>
-        <p class="card-sub">
-          Wie knallt der Sound? Schreib deine Meinung, Bug-Meldungen oder Wünsche direkt ins Studio:
-        </p>
-
-        <div class="form-field">
-          <label>BEWERTUNG</label>
-          <div class="rating-row" id="rating-buttons">
-            <button type="button" class="rate-btn" data-rate="1" onclick="selectRating(1)">1 ★</button>
-            <button type="button" class="rate-btn" data-rate="2" onclick="selectRating(2)">2 ★</button>
-            <button type="button" class="rate-btn" data-rate="3" onclick="selectRating(3)">3 ★</button>
-            <button type="button" class="rate-btn" data-rate="4" onclick="selectRating(4)">4 ★</button>
-            <button type="button" class="rate-btn active" data-rate="5" onclick="selectRating(5)">5 ★ Abriss!</button>
+          <div class="studio-notice-box">
+            <strong>Wofür ist diese Website?</strong> Hier werden <strong>keine fertigen KI-Lieder</strong> generiert! Du baust dir hier per Echtzeit-Synthese eigene Kicks, Bässe, Snares, Melodie-Phrasen und komplette Pattern-Loops als <strong>.WAV-Samples</strong>, um sie danach auf deiner <strong>Korg Electribe 2</strong> oder in <strong>FL Studio</strong> zu arrangieren, zu schneiden und weiterzubearbeiten.
           </div>
         </div>
 
-        <div class="form-field">
-          <label>DEIN FEEDBACK / WUNSCH-FEATURE</label>
-          <textarea id="feedback-message" rows="3" maxlength="500" placeholder="z.B. Geiler Kick! Bau noch einen Rumble-Effekt oder mehr Presets ein..."></textarea>
+        <div class="studio-status-box">
+          <div class="status-top">
+            <span>WEB AUDIO ENGINE + LIMITER</span>
+            <span>KEINE KI &middot; 100% SYNTHESE</span>
+          </div>
+          <div class="status-display">
+            <span id="studio-status-text">BEREIT ZUM SCHRAUBEN</span>
+            <span class="bpm-readout"><span id="header-bpm">180</span> BPM</span>
+          </div>
+          <div class="social-row">
+            <a class="nav-pill primary" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud</a>
+            <a class="nav-pill secondary" href="https://www.tiktok.com/@sventekk07" target="_blank" rel="noopener noreferrer">TikTok @sventekk07</a>
+            <a class="nav-pill secondary" href="https://www.instagram.com/sventekk07/" target="_blank" rel="noopener noreferrer">Insta @sventekk07</a>
+          </div>
         </div>
+      </header>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-          <button type="button" id="btn-send-feedback" class="btn btn-cyan" style="max-width: 240px;" onclick="submitFeedback()">Feedback absenden</button>
-          <span class="timer-text" id="feedback-user-hint">Wird gesendet als: Gast</span>
+      <!-- NEU IN VERSION 0.3 -->
+      <section class="changelog-bar" aria-label="Neu in Version 0.3">
+        <div class="changelog-head">
+          <div class="changelog-title">
+            <span class="chip">UPDATE V 0.3</span>
+            <h2>Neu in Version 0.3</h2>
+          </div>
+          <a href="korg-live.html" class="nav-pill primary">Korg Live öffnen &rarr;</a>
         </div>
+        <div class="changelog-grid">
+          <div class="changelog-item purple">
+            <div class="changelog-item-title">Korg Electribe 2 Live</div>
+            <p>Eigene Vollbild-Live-Ansicht mit Echtzeit-Visualizer, Performance-Overlays und Direktstart über <strong>KORG LIVE</strong>.</p>
+          </div>
+          <div class="changelog-item orange">
+            <div class="changelog-item-title">Bass- &amp; Uptempo-Modul</div>
+            <p>Neues <strong>Sub &amp; Rave Bass</strong> Modul (Sub, Offbeat Saw, Dark Reese) sowie geschärfte Piep-, Zaag- &amp; Terror-Kick-Engine.</p>
+          </div>
+          <div class="changelog-item cyan">
+            <div class="changelog-item-title">Sequenzer- &amp; Melodie-Upgrade</div>
+            <p>Komplette Melodie-Phrasen über 1–8 Takte, <strong>MONO / POLY</strong> Voice-Mode pro Spur und Multi-Takt Loop-.WAV-Export.</p>
+          </div>
+        </div>
+      </section>
 
-        <div id="feedback-status" class="feedback-status"></div>
-      </div>
-    </div>
-
-    <!-- ADMIN / ENTWICKLER PANEL -->
-    <div id="vip-admin-panel" style="display: none;">
+      <!-- 01: SYNTH GENERATOREN -->
       <div class="section-head">
-        <h2 class="section-title">
-          <span class="section-num" style="color: #d8b4fe; background: rgba(168,85,247,0.18);">ADMIN</span>
-          Nutzer-Ränge verwalten &amp; Feedback-Eingang
-        </h2>
-        <button type="button" class="btn btn-purple" style="flex: 0 0 auto; padding: 8px 14px;" onclick="loadAdminData()">↻ Aktualisieren</button>
+        <h2 class="section-title"><span class="section-num">01</span> Multi-Genre Sound-Synthese Module</h2>
       </div>
 
-      <div class="panel-box" style="overflow-x: auto; margin-bottom: 18px;">
-        <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Registrierte Accounts &amp; Rang-Zuweisung (<code>studio_users</code>)</h3>
-        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">
-          Als <strong>Entwickler</strong> kannst du hier jedem Account direkt einen Rang (<code>free</code>, <code>vip</code>, <code>tester</code>, <code>entwickler</code>) zuweisen.
-        </p>
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Benutzername</th>
-              <th>Aktueller Rang</th>
-              <th>Rang ändern</th>
-              <th>Exports</th>
-              <th>Letzter Login</th>
-            </tr>
-          </thead>
-          <tbody id="admin-users-tbody">
-            <tr><td colspan="5">Lade Daten...</td></tr>
-          </tbody>
-        </table>
+      <div class="modules-grid">
+        <!-- Modul 1: Hardtekk & Rave Kick -->
+        <div class="synth-card">
+          <div>
+            <div class="card-top">
+              <h3>Hardtekk &amp; Rave Kick</h3>
+              <span class="chip" id="kick-mode-badge">HARD KICK</span>
+            </div>
+            <p class="card-sub">Wähle den Kick-Stil oder tippe exakte Werte direkt in die Zahlenfelder.</p>
+
+            <div class="style-pills">
+              <button type="button" class="style-btn" data-mode="soft" onclick="setKickMode('soft')">Soft Kick</button>
+              <button type="button" class="style-btn active" data-mode="hard" onclick="setKickMode('hard')">Hard Kick</button>
+              <button type="button" class="style-btn" data-mode="industrial" onclick="setKickMode('industrial')">Industrial</button>
+              <button type="button" class="style-btn" data-mode="gabber" onclick="setKickMode('gabber')">Gabber</button>
+              <button type="button" class="style-btn" data-mode="schranz" onclick="setKickMode('schranz')">Schranz</button>
+              <button type="button" class="style-btn" data-mode="hardtechno" onclick="setKickMode('hardtechno')">Hard Techno</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span>Start-Frequenz (Klick)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-start" min="90" max="900" step="1" value="240"> Hz</span>
+                </label>
+                <input type="range" id="start_hz" min="90" max="900" step="1" value="240">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>End-Frequenz (Subbass)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-end" min="25" max="110" step="1" value="45"> Hz</span>
+                </label>
+                <input type="range" id="end_hz" min="25" max="110" step="1" value="45">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Punch-Kurve (Knackigkeit)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-punch" min="2" max="20" step="1" value="6"></span>
+                </label>
+                <input type="range" id="kick_punch" min="2" max="20" step="1" value="6">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Sub-Tail / Rumble-Dicke</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-tail" min="0.2" max="3.0" step="0.1" value="1.0"></span>
+                </label>
+                <input type="range" id="kick_tail" min="0.2" max="3.0" step="0.1" value="1.0">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Crunch / Metall-Anteil</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-crunch" min="0" max="1.0" step="0.05" value="0.15"></span>
+                </label>
+                <input type="range" id="kick_crunch" min="0" max="1.0" step="0.05" value="0.15">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Drive (Verzerrung)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-drive" min="1" max="35" step="0.5" value="5.5"></span>
+                </label>
+                <input type="range" id="drive" min="1" max="35" step="0.5" value="5.5">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Länge</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-dauer" min="0.15" max="1.5" step="0.05" value="0.5"> s</span>
+                </label>
+                <input type="range" id="dauer" min="0.15" max="1.5" step="0.05" value="0.5">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-cyan" onclick="playHardtekkKick()">Anhören</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadHardtekkKick()">.WAV Export</button>
+          </div>
+        </div>
+
+        <!-- Modul 2: Uptempo Piep / Zaag Kick -->
+        <div class="synth-card orange-theme">
+          <div>
+            <div class="card-top">
+              <h3>Uptempo Piep / Zaag Kick</h3>
+              <span class="chip orange" id="uptempo-mode-badge">ZAAG KICK</span>
+            </div>
+            <p class="card-sub">Eigene Uptempo-Engine mit Piep-Tok, Sägezahn-Zaag &amp; Terror-Clipper.</p>
+
+            <div class="style-pills">
+              <button type="button" class="style-btn up-style" data-upmode="piep" onclick="setUptempoMode('piep')">Piep Kick</button>
+              <button type="button" class="style-btn up-style active" data-upmode="zaag" onclick="setUptempoMode('zaag')">Zaag Kick</button>
+              <button type="button" class="style-btn up-style" data-upmode="terror" onclick="setUptempoMode('terror')">Terror 230+</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span>Piep-Punch (Tok)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-start" min="140" max="1400" step="5" value="420"> Hz</span>
+                </label>
+                <input type="range" id="up_start" min="140" max="1400" step="5" value="420">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Bass-Bauch (Body)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-end" min="32" max="130" step="1" value="50"> Hz</span>
+                </label>
+                <input type="range" id="up_end" min="32" max="130" step="1" value="50">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Zaag-Säge (Oberton)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-zaag" min="0" max="1.5" step="0.05" value="0.90"></span>
+                </label>
+                <input type="range" id="up_zaag" min="0" max="1.5" step="0.05" value="0.90">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Tok-Snap (Geschwindigkeit)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-snap" min="10" max="95" step="1" value="38"> ms</span>
+                </label>
+                <input type="range" id="up_snap" min="10" max="95" step="1" value="38">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Clip-Drive (Härte)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-drive" min="5" max="50" step="1" value="28"></span>
+                </label>
+                <input type="range" id="up_drive" min="5" max="50" step="1" value="28">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Länge</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-up-dauer" min="0.15" max="0.7" step="0.01" value="0.32"> s</span>
+                </label>
+                <input type="range" id="up_dauer" min="0.15" max="0.7" step="0.01" value="0.32">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-orange" onclick="playUptempoKick()">Anhören</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadUptempoKick()">.WAV Export</button>
+          </div>
+        </div>
+
+        <!-- Modul 3: Sub & Rave Bass -->
+        <div class="synth-card">
+          <div>
+            <div class="card-top">
+              <h3>Sub &amp; Rave Bass</h3>
+              <span class="chip" id="bass-mode-badge">SUB BASS</span>
+            </div>
+            <p class="card-sub">Druckvoller Sub-Bass, Offbeat-Saw &amp; Dark Reese mit gleicher Reglerhöhe.</p>
+
+            <div class="style-pills">
+              <button type="button" class="style-btn bass-style active" data-bassmode="sub" onclick="setBassMode('sub')">Sub Bass</button>
+              <button type="button" class="style-btn bass-style" data-bassmode="offbeat" onclick="setBassMode('offbeat')">Offbeat Saw</button>
+              <button type="button" class="style-btn bass-style" data-bassmode="reese" onclick="setBassMode('reese')">Dark Reese</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span>Grundton (Frequenz)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-freq" min="30" max="140" step="1" value="55"> Hz</span>
+                </label>
+                <input type="range" id="bass_freq" min="30" max="140" step="1" value="55">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Sub-Anteil (Tiefe)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-sub" min="0" max="1.5" step="0.05" value="1.15"></span>
+                </label>
+                <input type="range" id="bass_sub" min="0" max="1.5" step="0.05" value="1.15">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Filter-Cutoff (Knurren)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-cutoff" min="80" max="2200" step="10" value="240"> Hz</span>
+                </label>
+                <input type="range" id="bass_cutoff" min="80" max="2200" step="10" value="240">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Resonanz (Filter-Q)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-res" min="0.5" max="12" step="0.5" value="2.0"></span>
+                </label>
+                <input type="range" id="bass_res" min="0.5" max="12" step="0.5" value="2.0">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Bass-Drive (Sättigung)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-drive" min="1" max="25" step="0.5" value="3.5"></span>
+                </label>
+                <input type="range" id="bass_drive" min="1" max="25" step="0.5" value="3.5">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Länge (Decay)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-bass-dauer" min="0.12" max="1.5" step="0.02" value="0.48"> s</span>
+                </label>
+                <input type="range" id="bass_dauer" min="0.12" max="1.5" step="0.02" value="0.48">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-cyan" onclick="playBass()">Anhören</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadBass()">.WAV Export</button>
+          </div>
+        </div>
+
+        <!-- Modul 4: Snares, Claps & Hi-Hat Rolls -->
+        <div class="synth-card">
+          <div>
+            <div class="card-top">
+              <h3>Snares, Claps &amp; Hat-Rolls</h3>
+              <span class="chip" id="snare-mode-badge">TEKK SNARE</span>
+            </div>
+            <p class="card-sub">Snare-, Clap- und Rim-Synthese mit Filter, Drive &amp; 16tel-Hi-Hat Rolls.</p>
+
+            <div class="style-pills">
+              <button type="button" class="style-btn snare-style active" data-snaremode="snare" onclick="setSnareMode('snare')">Tekk Snare</button>
+              <button type="button" class="style-btn snare-style" data-snaremode="clap" onclick="setSnareMode('clap')">Rave Clap</button>
+              <button type="button" class="style-btn snare-style" data-snaremode="rim" onclick="setSnareMode('rim')">Industrial Rim</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span>Snare-Ton (Pitch)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-snare-tone" min="110" max="520" step="1" value="210"> Hz</span>
+                </label>
+                <input type="range" id="snare_tone" min="110" max="520" step="1" value="210">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Snare-Länge (Decay)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-snare-len" min="0.06" max="0.75" step="0.02" value="0.24"> s</span>
+                </label>
+                <input type="range" id="snare_len" min="0.06" max="0.75" step="0.02" value="0.24">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Noise-Filter (Hochpass)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-snare-filter" min="400" max="4200" step="50" value="1100"> Hz</span>
+                </label>
+                <input type="range" id="snare_filter" min="400" max="4200" step="50" value="1100">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Snare-Drive (Härte)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-snare-drive" min="1" max="20" step="0.5" value="3.5"></span>
+                </label>
+                <input type="range" id="snare_drive" min="1" max="20" step="0.5" value="3.5">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Roll-Schläge</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-hat-hits" min="2" max="32" step="1" value="8"> x</span>
+                </label>
+                <input type="range" id="hat_hits" min="2" max="32" step="1" value="8">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-cyan" onclick="playSnare()">Snare</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadSnare()">Snare .WAV</button>
+            <button type="button" class="btn btn-cyan" onclick="playHatRoll()">Hat-Roll</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadHatRoll()">Roll .WAV</button>
+          </div>
+        </div>
+
+        <!-- Modul 5: Rave Melodien & Hook Lab -->
+        <div class="synth-card purple-theme" style="grid-column: span 2;">
+          <div>
+            <div class="card-top">
+              <h3>Rave Melodien &amp; Hook Lab</h3>
+              <span class="chip purple">KOMPLETTE PHRASE</span>
+            </div>
+            <p class="card-sub">Komplette Melodie-Phrasen über 1–8 Takte mit direktem Start, variabler Notenlänge &amp; Ausklang.</p>
+
+            <div class="select-row">
+              <div class="select-group">
+                <span>MELODIE-PATTERN</span>
+                <select id="melody_pattern" onchange="buildMelodyNotes()">
+                  <option value="offbeat">1. Classic Rave Off-Beat</option>
+                  <option value="staircase">2. Hardtekk Staircase</option>
+                  <option value="frenzy">3. Uptempo Frenzy</option>
+                  <option value="acid">4. Hypnotic Acid Roll</option>
+                  <option value="anthem">5. Dark Trance Anthem</option>
+                  <option value="octave">6. Octave Bounce Hook</option>
+                  <option value="random">7. Random Rave Hook 🎲</option>
+                </select>
+              </div>
+              <div class="select-group">
+                <span>TONART (SCALE)</span>
+                <select id="melody_scale" onchange="buildMelodyNotes()">
+                  <option value="phrygian">E Phrygian (Hardtekk)</option>
+                  <option value="aminor">A-Moll (Rave Classic)</option>
+                  <option value="fminor">F-Moll (Dark Uptempo)</option>
+                  <option value="dminor">D-Moll (Hardstyle)</option>
+                  <option value="harmonic">G Harmonic Minor (Ostblock)</option>
+                  <option value="cminor">C-Moll (Industrial)</option>
+                  <option value="major">C-Dur (Euphoric Happy)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="select-row">
+              <div class="select-group">
+                <span>SYNTH-CHARAKTER</span>
+                <select id="melody_synth">
+                  <option value="supersaw">SuperSaw Rave Lead</option>
+                  <option value="acid303">Acid 303 Squelch</option>
+                  <option value="screech">Screech FM Lead</option>
+                  <option value="pluck">Pluck Trance Bell</option>
+                </select>
+              </div>
+              <div class="select-group">
+                <span>MELODIE-LÄNGE (TAKTE)</span>
+                <select id="melody_bars">
+                  <option value="1">1 Takt (8 Noten)</option>
+                  <option value="2">2 Takte (16 Noten)</option>
+                  <option value="4" selected>4 Takte (32 Noten / Komplett)</option>
+                  <option value="8">8 Takte (64 Noten / Extended)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span>Noten-Dauer / Gate (Länge pro Ton)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-mel-gate" min="0.25" max="1.6" step="0.05" value="0.95"> x</span>
+                </label>
+                <input type="range" id="melody_gate" min="0.25" max="1.6" step="0.05" value="0.95">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Ton-Einsatz / Attack (Verzögerung)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-mel-attack" min="0" max="150" step="2" value="0"> ms</span>
+                </label>
+                <input type="range" id="mel_attack" min="0" max="150" step="2" value="0">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Ausklang / Release-Fahne</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-mel-rel" min="0.05" max="0.8" step="0.05" value="0.25"> s</span>
+                </label>
+                <input type="range" id="mel_release" min="0.05" max="0.8" step="0.05" value="0.25">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Filter-Cutoff (Helligkeit)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-mel-cutoff" min="400" max="9500" step="50" value="3600"> Hz</span>
+                </label>
+                <input type="range" id="mel_cutoff" min="400" max="9500" step="50" value="3600">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span>Detune / Rave-Breite</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-mel-detune" min="2" max="50" step="1" value="22"> ct</span>
+                </label>
+                <input type="range" id="mel_detune" min="2" max="50" step="1" value="22">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-purple" onclick="playMelody()">Komplette Phrase anhören</button>
+            <button type="button" class="btn btn-ghost" onclick="stopMelodyPreview()">■ Stop</button>
+            <button type="button" class="btn btn-ghost" onclick="randomizeMelody()">🎲 Neue Hook</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadMelody()">Komplett .WAV</button>
+          </div>
+        </div>
       </div>
 
-      <div class="panel-box" style="overflow-x: auto;">
-        <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Eingegangenes Feedback (<code>studio_feedback</code>)</h3>
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Rating</th>
-              <th>Version</th>
-              <th>Nachricht</th>
-              <th>Datum</th>
-            </tr>
-          </thead>
-          <tbody id="admin-feedback-tbody">
-            <tr><td colspan="5">Lade Feedback...</td></tr>
-          </tbody>
-        </table>
+      <!-- 02: LIVE STEP SEQUENZER -->
+      <div class="section-head">
+        <h2 class="section-title"><span class="section-num">02</span> 16-Step Live Groovebox &amp; Kompletter Loop-Export</h2>
       </div>
+
+      <div class="panel-box">
+        <div class="seq-header">
+          <div>
+            <h3 style="font-size: 1.1rem;">Pattern Sequenzer &amp; Voice Mode</h3>
+            <p style="font-size: 0.84rem; color: var(--text-dim);">Klicke auf <strong>MONO / POLY</strong> pro Spur, um Überlappungen zu steuern, oder exportiere den kompletten Loop am Stück.</p>
+          </div>
+          <div class="seq-tools">
+            <button type="button" id="btn-seq-play" class="btn btn-orange" style="min-width: 110px;" onclick="toggleSequencer()">▶ START</button>
+            <select id="seq_export_bars" style="width: auto;">
+              <option value="1">1 Takt (16 Steps)</option>
+              <option value="2">2 Takte (32 Steps)</option>
+              <option value="4" selected>4 Takte (64 Steps / Komplett)</option>
+              <option value="8">8 Takte (128 Steps / Full Drop)</option>
+            </select>
+            <button type="button" class="btn btn-cyan" onclick="downloadFullSequencer()">⬇ Kompletter Loop (.WAV)</button>
+            <button type="button" class="btn btn-ghost" onclick="loadPresetPattern('hardtekk')">Preset: Hardtekk</button>
+            <button type="button" class="btn btn-ghost" onclick="loadPresetPattern('uptempo')">Preset: Uptempo</button>
+            <button type="button" class="btn btn-ghost" onclick="clearSequencer()">Leeren</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px; max-width: 380px;">
+          <div class="slider-item">
+            <label>
+              <span>Master Tempo</span>
+              <span class="num-unit"><input type="number" class="num-box" id="num-bpm" min="120" max="260" step="1" value="180"> BPM</span>
+            </label>
+            <input type="range" id="bpm" min="120" max="260" step="1" value="180">
+          </div>
+        </div>
+
+        <div id="sequencer-rows"></div>
+      </div>
+
+      <!-- 03: SAMPLE LIBRARY -->
+      <div class="section-head">
+        <h2 class="section-title"><span class="section-num">03</span> Sample-Library &amp; Hardware Workflow</h2>
+      </div>
+
+      <div class="panel-box">
+        <div class="library-header">
+          <div>
+            <h3 style="font-size: 1.1rem;">Eigene Audio-Clips &amp; Kicks vorhören</h3>
+            <p style="font-size: 0.84rem; color: var(--text-dim);">Lade eigene .WAV oder .MP3 Dateien direkt im Browser zum Gegenhören.</p>
+          </div>
+          <label class="upload-btn">
+            + Eigene WAV/MP3 laden
+            <input type="file" id="audio-uploader" accept="audio/wav,audio/mpeg,audio/ogg,audio/flac" multiple style="display:none" onchange="handleAudioUpload(event)">
+          </label>
+        </div>
+        <div id="sample-library-list" class="sample-grid"></div>
+      </div>
+
+      <!-- 04: WORKFLOW -->
+      <div class="section-head">
+        <h2 class="section-title"><span class="section-num">04</span> Korg Electribe 2 &amp; FL Studio Workflow</h2>
+      </div>
+
+      <div class="workflow-grid">
+        <div class="wf-step">
+          <div style="font-weight: 700; margin-bottom: 4px;">1. Synthese statt KI</div>
+          <p style="font-size: 0.84rem; color: var(--text-dim);">Hier werden keine KI-Tracks generiert – du formst eigene Kicks, Bässe, Snares/Claps, Melodie-Phrasen und komplette Loops per Synthesizer.</p>
+        </div>
+        <div class="wf-step" style="border-left-color: var(--orange);">
+          <div style="font-weight: 700; margin-bottom: 4px;">2. Komplette .WAV-Datei exportieren</div>
+          <p style="font-size: 0.84rem; color: var(--text-dim);">Exportiere einzelne Sounds oder den kompletten Sequenzer-Loop inklusive Ausklang als 16-Bit .WAV.</p>
+        </div>
+        <div class="wf-step" style="border-left-color: var(--purple);">
+          <div style="font-weight: 700; margin-bottom: 4px;">3. Korg Electribe 2 &amp; FL Studio</div>
+          <p style="font-size: 0.84rem; color: var(--text-dim);">Lade die Samples in deine Korg Electribe 2 oder in FL Studio, um sie dort weiter zu arrangieren, zu verzerren und auszuarbeiten.</p>
+        </div>
+      </div>
+
+      <!-- 05: FEEDBACK & FIX-NOTIZBLOCK -->
+      <div class="section-head">
+        <h2 class="section-title"><span class="section-num">05</span> Feedback &amp; Offene Fixes</h2>
+        <span class="chip" id="feedback-version-chip">V 0.3</span>
+      </div>
+
+      <div class="modules-grid">
+        <div class="panel-box" id="dev-fix-notes-card" style="display: none;">
+          <div class="card-top">
+            <h3>Offene Fixes &amp; Bug-Notizen</h3>
+            <span class="chip orange">NUR ENTWICKLER</span>
+          </div>
+          <p class="card-sub">Schreib hier alles rein, was noch gefixt oder geändert werden muss – bleibt automatisch im Browser gespeichert.</p>
+
+          <div class="form-field">
+            <label>NOCH ZU FIXEN / ÄNDERN</label>
+            <textarea id="dev-fix-notes" rows="6" placeholder="z.B.&#10;- Zaag-Kick noch schärfer machen&#10;- Snare-Clap Release testen&#10;- Sequenzer-Preset für 220 BPM"></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-orange" onclick="saveFixNotes()">Notizen speichern</button>
+            <button type="button" class="btn btn-ghost" onclick="clearFixNotes()">Leeren</button>
+          </div>
+          <div id="fix-notes-status" class="feedback-status"></div>
+        </div>
+
+        <div class="panel-box" style="grid-column: span 2;">
+          <div class="card-top">
+            <h3>Feedback &amp; Ideen-Kasten</h3>
+            <span class="chip">CLOUD</span>
+          </div>
+          <p class="card-sub">
+            Wie knallt der Sound? Schreib deine Meinung, Bug-Meldungen oder Wünsche direkt ins Studio:
+          </p>
+
+          <div class="form-field">
+            <label>BEWERTUNG</label>
+            <div class="rating-row" id="rating-buttons">
+              <button type="button" class="rate-btn" data-rate="1" onclick="selectRating(1)">1 ★</button>
+              <button type="button" class="rate-btn" data-rate="2" onclick="selectRating(2)">2 ★</button>
+              <button type="button" class="rate-btn" data-rate="3" onclick="selectRating(3)">3 ★</button>
+              <button type="button" class="rate-btn" data-rate="4" onclick="selectRating(4)">4 ★</button>
+              <button type="button" class="rate-btn active" data-rate="5" onclick="selectRating(5)">5 ★ Abriss!</button>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>DEIN FEEDBACK / WUNSCH-FEATURE</label>
+            <textarea id="feedback-message" rows="3" maxlength="500" placeholder="z.B. Geiler Kick! Bau noch einen Rumble-Effekt oder mehr Presets ein..."></textarea>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <button type="button" id="btn-send-feedback" class="btn btn-cyan" style="max-width: 240px;" onclick="submitFeedback()">Feedback absenden</button>
+            <span class="timer-text" id="feedback-user-hint">Wird gesendet als: Gast</span>
+          </div>
+
+          <div id="feedback-status" class="feedback-status"></div>
+        </div>
+      </div>
+
+      <!-- ADMIN / ENTWICKLER PANEL -->
+      <div id="admin-panel" style="display: none;">
+        <div class="section-head">
+          <h2 class="section-title">
+            <span class="section-num" style="color: #d8b4fe; background: rgba(168,85,247,0.18);">ADMIN</span>
+            Nutzer-Ränge verwalten &amp; Feedback-Eingang
+          </h2>
+          <button type="button" class="btn btn-purple" style="flex: 0 0 auto; padding: 8px 14px;" onclick="loadAdminData()">↻ Aktualisieren</button>
+        </div>
+
+        <div class="panel-box" style="overflow-x: auto; margin-bottom: 18px;">
+          <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Registrierte Accounts &amp; Rang-Zuweisung (<code>studio_profiles</code>)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">
+            Als <strong>Entwickler</strong> kannst du hier jedem Account direkt einen Rang (<code>free</code>, <code>tester</code>, <code>entwickler</code>) zuweisen.
+          </p>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Benutzername</th>
+                <th>Aktueller Rang</th>
+                <th>Rang ändern</th>
+                <th>Exports</th>
+                <th>Letzter Login</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-tbody">
+              <tr><td colspan="5">Lade Daten...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-box" style="overflow-x: auto;">
+          <h3 style="font-size: 0.98rem; margin-bottom: 6px;">Eingegangenes Feedback (<code>studio_feedback</code>)</h3>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Rating</th>
+                <th>Version</th>
+                <th>Nachricht</th>
+                <th>Datum</th>
+              </tr>
+            </thead>
+            <tbody id="admin-feedback-tbody">
+              <tr><td colspan="5">Lade Feedback...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer>
+        SVENTEKK Audio Lab &middot; <strong id="footer-version-text">Version 0.3</strong> &middot; Modular Web Audio Synthesizer (Keine KI-Songs)
+      </footer>
+
     </div>
 
-    <footer>
-      SVENTEKK Audio Lab &middot; <strong id="footer-version-text">Version 0.2</strong> &middot; Modular Web Audio Synthesizer (Keine KI-Songs)
-    </footer>
   </div>
 
   <!-- SKRIPTE IN KLARER REIHENFOLGE -->

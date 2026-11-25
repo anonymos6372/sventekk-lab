@@ -1,28 +1,25 @@
 /* =========================================================================
    1. KONSTANTEN & STATUSVARIABLEN
    ========================================================================= */
-const APP_VERSION = '0.2';
+const APP_VERSION = '0.3';
 
 const SUPABASE_URL = 'https://zrdturntjcdvazyrrskk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZHR1cm50amNkdmF6eXJyc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0Njc2NTEsImV4cCI6MjExMTA0MzY1MX0.-mhnNpMM096PZeo-Xxf0zrjycnCyP0V9sKLjMExIofI';
 
-const STORAGE_SESSION_KEY = 'sventekk_cloud_session_v1';
-const STORAGE_QUOTA_KEY = 'sventekk_device_quota_v2';
+const AUTH_EMAIL_DOMAIN = 'users.sventekk.app';
+const STORAGE_AUTH_KEY = 'sventekk_auth_session_v2';
+const LEGACY_SESSION_KEY = 'sventekk_cloud_session_v1';
 
 const FREE_CREDITS_MAX = 5;
 const RESET_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-const ROLE_CODES = {
-  'SVENTEKK2026VIP': 'vip',
-  'SVENTEKKTESTER': 'tester'
-};
-
 let authMode = 'login';
+let authSession = null;
 let currentUser = null;
 let selectedRating = 5;
 
 /* =========================================================================
-   2. HILFSFUNKTIONEN & SESSION
+   2. HILFSFUNKTIONEN & AUTH-SESSION (JWT)
    ========================================================================= */
 function applyVersionTags() {
   const hb = document.getElementById('header-version-badge');
@@ -33,9 +30,14 @@ function applyVersionTags() {
   if (ft) ft.innerText = `Version ${APP_VERSION}`;
 }
 
-function clearPersistentSession() {
-  localStorage.removeItem(STORAGE_SESSION_KEY);
-  document.cookie = `${STORAGE_SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+function usernameToAuthEmail(username) {
+  return `${username.toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
+}
+
+function isValidUsername(raw) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,22}[a-zA-Z0-9]$/.test(raw)) return false;
+  if (raw.includes('..')) return false;
+  return true;
 }
 
 function escapeHtml(value) {
@@ -56,98 +58,174 @@ function formatTimeLeft(ms) {
   return `${h}:${m}:${s}`;
 }
 
-function getDeviceQuota() {
-  const now = Date.now();
-  let q = null;
-  try { q = JSON.parse(localStorage.getItem(STORAGE_QUOTA_KEY)); } catch (e) {}
-  if (!q || typeof q.used !== 'number' || typeof q.windowStart !== 'number') {
-    q = { used: 0, windowStart: now };
+function readStoredAuthSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_AUTH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.access_token || !parsed.refresh_token) return null;
+    return parsed;
+  } catch (e) {
+    return null;
   }
-  if (now - q.windowStart >= RESET_WINDOW_MS) {
-    q = { used: 0, windowStart: now };
+}
+
+function saveAuthSession(tokenPayload) {
+  const expiresInSec = Number(tokenPayload.expires_in) || 3600;
+  authSession = {
+    access_token: tokenPayload.access_token,
+    refresh_token: tokenPayload.refresh_token,
+    expires_at: Date.now() + (expiresInSec * 1000)
+  };
+  try {
+    localStorage.setItem(STORAGE_AUTH_KEY, JSON.stringify(authSession));
+  } catch (e) {}
+}
+
+function clearAuthSession() {
+  authSession = null;
+  try {
+    localStorage.removeItem(STORAGE_AUTH_KEY);
+    localStorage.removeItem(LEGACY_SESSION_KEY);
+  } catch (e) {}
+  document.cookie = `${LEGACY_SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+}
+
+async function parseErrorMessage(res) {
+  try {
+    const data = await res.json();
+    return data.msg || data.message || data.error_description || data.error || `HTTP ${res.status}`;
+  } catch (e) {
+    return `HTTP ${res.status}`;
   }
-  localStorage.setItem(STORAGE_QUOTA_KEY, JSON.stringify(q));
-  return q;
-}
-
-function getPersistentSession() {
-  const ls = localStorage.getItem(STORAGE_SESSION_KEY);
-  if (ls) return ls;
-  const match = document.cookie.match(new RegExp('(?:^|; )' + STORAGE_SESSION_KEY + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function saveDeviceQuota(q) {
-  localStorage.setItem(STORAGE_QUOTA_KEY, JSON.stringify(q));
-}
-
-function setPersistentSession(username) {
-  localStorage.setItem(STORAGE_SESSION_KEY, username);
-  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${STORAGE_SESSION_KEY}=${encodeURIComponent(username)}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
-async function sha256Hex(text) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 /* =========================================================================
-   3. SUPABASE REST-FUNKTIONEN
+   3. SUPABASE AUTH & RPC-FUNKTIONEN
    ========================================================================= */
-async function sbCreateUser(userObj) {
-  const url = `${SUPABASE_URL}/rest/v1/studio_users`;
-  const res = await fetch(url, {
+async function sbAuthSignUp(username, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(userObj)
+    body: JSON.stringify({
+      email: usernameToAuthEmail(username),
+      password,
+      data: { username }
+    })
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  const rows = await res.json();
-  return rows[0] || userObj;
-}
-
-async function sbFetchUser(username) {
-  const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}&select=*`;
-  const res = await fetch(url, {
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res);
+    if (/already registered|already exists/i.test(msg)) {
+      throw new Error('Dieser Benutzername existiert bereits. Bitte anmelden.');
     }
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  const rows = await res.json();
-  return rows[0] || null;
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if (!data.access_token || !data.refresh_token) {
+    throw new Error('Registrierung unvollständig: Bitte in Supabase "Confirm email" unter Auth -> Email deaktivieren.');
+  }
+  saveAuthSession(data);
+  return data;
 }
 
-async function sbUpdateUser(username, patch) {
-  const url = `${SUPABASE_URL}/rest/v1/studio_users?username=eq.${encodeURIComponent(username)}`;
-  const res = await fetch(url, {
-    method: 'PATCH',
+async function sbAuthSignIn(username, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(patch)
+    body: JSON.stringify({
+      email: usernameToAuthEmail(username),
+      password
+    })
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  const rows = await res.json();
-  return rows[0] || null;
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res);
+    if (/invalid login credentials/i.test(msg)) {
+      throw new Error('Benutzername oder Passwort falsch.');
+    }
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if (!data.access_token || !data.refresh_token) {
+    throw new Error('Anmeldung fehlgeschlagen.');
+  }
+  saveAuthSession(data);
+  return data;
+}
+
+async function sbAuthRefresh() {
+  if (!authSession || !authSession.refresh_token) return null;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ refresh_token: authSession.refresh_token })
+  });
+  if (!res.ok) {
+    clearAuthSession();
+    return null;
+  }
+  const data = await res.json();
+  if (!data.access_token || !data.refresh_token) {
+    clearAuthSession();
+    return null;
+  }
+  saveAuthSession(data);
+  return authSession.access_token;
+}
+
+async function getValidAccessToken() {
+  if (!authSession) authSession = readStoredAuthSession();
+  if (!authSession) return null;
+  if (Date.now() < Number(authSession.expires_at || 0) - 60000) {
+    return authSession.access_token;
+  }
+  return await sbAuthRefresh();
+}
+
+async function sbRpc(fnName, params = {}) {
+  const token = await getValidAccessToken();
+  if (!token) throw new Error('Session abgelaufen. Bitte neu anmelden.');
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(params)
+  });
+
+  if (res.status === 401) {
+    const refreshed = await sbAuthRefresh();
+    if (!refreshed) throw new Error('Session abgelaufen. Bitte neu anmelden.');
+    const retry = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${refreshed}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    });
+    if (!retry.ok) throw new Error(await parseErrorMessage(retry));
+    return await retry.json();
+  }
+
+  if (!res.ok) throw new Error(await parseErrorMessage(res));
+  return await res.json();
 }
 
 /* =========================================================================
-   4. RÄNGE & LOGIN (NUR ÜBER SUPABASE-ACCOUNT)
+   4. RÄNGE & LOGIN (SUPABASE AUTH + RLS)
    ========================================================================= */
 function canEditUserRoles(user) {
   if (!user) return false;
@@ -156,84 +234,109 @@ function canEditUserRoles(user) {
 
 function canViewAdminPanel(user) {
   if (!user) return false;
-  const r = getEffectiveRole(user);
-  return r === 'vip' || r === 'entwickler';
+  return getEffectiveRole(user) === 'entwickler';
 }
 
 function closeAuthModal() { document.getElementById('auth-modal').classList.remove('open'); }
 function closeLimitModal() { document.getElementById('limit-modal').classList.remove('open'); }
-function closeVipModal() { document.getElementById('vip-modal').classList.remove('open'); }
+function closeRoleModal() { document.getElementById('role-modal').classList.remove('open'); }
 
-function consumeExportCredit() {
+function jumpToFeedbackFromLimit() {
+  closeLimitModal();
+  if (typeof setStudioPage === 'function') {
+    setStudioPage('studio');
+  }
+  const msgEl = document.getElementById('feedback-message');
+  if (msgEl) {
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => msgEl.focus(), 300);
+  }
+}
+
+async function consumeExportCredit() {
   if (!requireLoginOnly()) return false;
   if (hasUnlimitedExports(currentUser)) return true;
 
-  const now = Date.now();
-  if (!currentUser.window_start || now - Number(currentUser.window_start) >= RESET_WINDOW_MS) {
-    currentUser.credits_used = 0;
-    currentUser.window_start = now;
-  }
-
-  if (Number(currentUser.credits_used) >= FREE_CREDITS_MAX) {
+  try {
+    const result = await sbRpc('consume_export_credit');
+    if (result && result.profile) {
+      currentUser = result.profile;
+    }
     updateAccountUI();
-    document.getElementById('limit-modal').classList.add('open');
-    setStatus('24H EXPORT-LIMIT ERREICHT (0/5)');
+
+    if (!result || !result.allowed) {
+      document.getElementById('limit-modal').classList.add('open');
+      setStatus('24H EXPORT-LIMIT ERREICHT (0/5)');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    setStatus('EXPORT-PRÜFUNG FEHLGESCHLAGEN');
+    alert('Export konnte nicht geprüft werden: ' + e.message);
     return false;
   }
+}
 
-  currentUser.credits_used = Number(currentUser.credits_used) + 1;
-  const dq = getDeviceQuota();
-  dq.used = Math.max(dq.used + 1, currentUser.credits_used);
-  saveDeviceQuota(dq);
+function updateDevDownloadCounterVisibility() {
+  const box = document.getElementById('dev-download-counter-box');
+  const fixCard = document.getElementById('dev-fix-notes-card');
+  const isDev = Boolean(currentUser && getEffectiveRole(currentUser) === 'entwickler');
 
-  sbUpdateUser(currentUser.username, {
-    credits_used: currentUser.credits_used,
-    window_start: currentUser.window_start
-  }).catch(() => {});
+  if (box) box.style.display = isDev ? 'inline-flex' : 'none';
+  if (fixCard) fixCard.style.display = isDev ? 'block' : 'none';
 
-  updateAccountUI();
-  return true;
+  if (isDev && typeof updateDownloadCounterUI === 'function') {
+    updateDownloadCounterUI();
+  }
 }
 
 function getEffectiveRole(user) {
   if (!user) return 'free';
-  if (user.role) return user.role;
-  return user.is_vip ? 'vip' : 'free';
+  if (user.role === 'entwickler' || user.role === 'tester' || user.role === 'free') {
+    return user.role;
+  }
+  return 'free';
 }
 
 function hasUnlimitedExports(user) {
   if (!user) return false;
   const r = getEffectiveRole(user);
-  return r === 'vip' || r === 'tester' || r === 'entwickler';
+  return r === 'tester' || r === 'entwickler';
 }
 
 async function loadSession() {
   localStorage.removeItem('sventekk_local_dev_mode');
   sessionStorage.removeItem('sventekk_owner_dev_v1');
 
-  const savedName = getPersistentSession();
-  if (!savedName) {
+  const token = await getValidAccessToken();
+  if (!token) {
     currentUser = null;
     updateAccountUI();
     return;
   }
+
   try {
-    const dbUser = await sbFetchUser(savedName);
-    if (dbUser) {
-      currentUser = await syncUserReset(dbUser);
-      setPersistentSession(savedName);
-    } else {
-      clearPersistentSession();
-      currentUser = null;
-    }
+    const profile = await sbRpc('touch_login');
+    currentUser = profile || null;
   } catch (e) {
+    clearAuthSession();
     currentUser = null;
   }
   updateAccountUI();
 }
 
-function logoutUser() {
-  clearPersistentSession();
+async function logoutUser() {
+  const token = authSession ? authSession.access_token : null;
+  if (token) {
+    fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`
+      }
+    }).catch(() => {});
+  }
+  clearAuthSession();
   currentUser = null;
   updateAccountUI();
   setStatus('ABGEMELDET');
@@ -245,12 +348,12 @@ function openAuthModal(mode = 'login') {
   document.getElementById('auth-modal').classList.add('open');
 }
 
-function openVipModal() {
+function openRoleModal() {
   closeLimitModal();
   if (!currentUser) { openAuthModal('login'); return; }
-  document.getElementById('vip-code-input').value = '';
-  document.getElementById('vip-modal-msg').innerText = '';
-  document.getElementById('vip-modal').classList.add('open');
+  document.getElementById('role-code-input').value = '';
+  document.getElementById('role-modal-msg').innerText = '';
+  document.getElementById('role-modal').classList.add('open');
 }
 
 function requireLoginOnly() {
@@ -265,16 +368,16 @@ function requireLoginOnly() {
 async function submitAuth() {
   const rawUser = document.getElementById('auth-username').value.trim();
   const pass = document.getElementById('auth-password').value;
-  const codeInput = document.getElementById('auth-vipcode').value.trim().toUpperCase();
+  const codeInput = document.getElementById('auth-rolecode').value.trim().toUpperCase();
   const errEl = document.getElementById('auth-error');
   const submitBtn = document.getElementById('btn-auth-submit');
 
-  if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(rawUser)) {
-    errEl.innerText = 'Benutzername: 3–24 Zeichen (nur Buchstaben, Zahlen, _ . -).';
+  if (!isValidUsername(rawUser)) {
+    errEl.innerText = 'Benutzername: 3–24 Zeichen (Buchstaben/Zahlen am Rand, sonst _ . - erlaubt).';
     return;
   }
-  if (pass.length < 4) {
-    errEl.innerText = 'Passwort muss mindestens 4 Zeichen lang sein.';
+  if (pass.length < 6) {
+    errEl.innerText = 'Passwort muss mindestens 6 Zeichen lang sein.';
     return;
   }
 
@@ -284,52 +387,33 @@ async function submitAuth() {
 
   try {
     const username = rawUser.toLowerCase();
-    const passHash = await sha256Hex(username + '::' + pass);
-    const existingUser = await sbFetchUser(username);
 
     if (authMode === 'register') {
-      if (existingUser) {
-        errEl.innerText = 'Dieser Benutzername existiert bereits. Bitte anmelden.';
-        return;
+      await sbAuthSignUp(username, pass);
+      let profile = await sbRpc('touch_login');
+      let codeHint = '';
+
+      if (codeInput) {
+        try {
+          profile = await sbRpc('redeem_tester_code', { p_code: codeInput });
+        } catch (codeErr) {
+          codeHint = ' (CODE UNGÜLTIG -> FREE)';
+        }
       }
-      const assignedRole = ROLE_CODES[codeInput] || 'free';
-      const isVip = assignedRole !== 'free';
-      const dq = getDeviceQuota();
 
-      const newUser = {
-        username,
-        pass_hash: passHash,
-        role: assignedRole,
-        is_vip: isVip,
-        credits_used: isVip ? 0 : dq.used,
-        window_start: dq.windowStart,
-        last_login: new Date().toISOString()
-      };
-
-      const created = await sbCreateUser(newUser);
-      setPersistentSession(username);
-      currentUser = created;
+      currentUser = profile;
       closeAuthModal();
       updateAccountUI();
-      setStatus(`WILLKOMMEN ${username.toUpperCase()} (${assignedRole.toUpperCase()})!`);
+      setStatus(`WILLKOMMEN ${username.toUpperCase()} (${getEffectiveRole(currentUser).toUpperCase()})${codeHint}`);
     } else {
-      if (!existingUser) {
-        errEl.innerText = 'Account nicht gefunden. Bitte zuerst registrieren.';
-        return;
-      }
-      if (existingUser.pass_hash !== passHash) {
-        errEl.innerText = 'Falsches Passwort.';
-        return;
-      }
-      await sbUpdateUser(username, { last_login: new Date().toISOString() });
-      setPersistentSession(username);
-      currentUser = await syncUserReset(existingUser);
+      await sbAuthSignIn(username, pass);
+      currentUser = await sbRpc('touch_login');
       closeAuthModal();
       updateAccountUI();
       setStatus(`EINGELOGGT ALS ${username.toUpperCase()}`);
     }
   } catch (e) {
-    errEl.innerText = 'Cloud-Fehler: ' + e.message;
+    errEl.innerText = e.message || 'Cloud-Fehler bei der Anmeldung.';
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerText = 'Weiter ins Studio';
@@ -337,44 +421,31 @@ async function submitAuth() {
 }
 
 async function submitRoleCode() {
-  const inputEl = document.getElementById('vip-code-input');
-  const msgEl = document.getElementById('vip-modal-msg');
-  const btn = document.getElementById('btn-vip-submit');
+  const inputEl = document.getElementById('role-code-input');
+  const msgEl = document.getElementById('role-modal-msg');
+  const btn = document.getElementById('btn-role-submit');
   const entered = inputEl.value.trim().toUpperCase();
 
-  if (!currentUser) { closeVipModal(); openAuthModal('login'); return; }
-
-  const matchedRole = ROLE_CODES[entered];
-  if (!matchedRole) {
+  if (!currentUser) { closeRoleModal(); openAuthModal('login'); return; }
+  if (!entered) {
     msgEl.style.color = '#fca5a5';
-    msgEl.innerText = 'Ungültiger Rang-Code.';
+    msgEl.innerText = 'Bitte einen Tester-Code eingeben.';
     return;
   }
 
   btn.disabled = true;
-  btn.innerText = 'Aktiviere...';
+  btn.innerText = 'Prüfe...';
   msgEl.innerText = '';
 
   try {
-    const updated = await sbUpdateUser(currentUser.username, {
-      role: matchedRole,
-      is_vip: true,
-      credits_used: 0
-    });
-    currentUser = {
-      ...currentUser,
-      ...(updated || {}),
-      role: matchedRole,
-      is_vip: true,
-      credits_used: 0
-    };
-    closeVipModal();
+    const updated = await sbRpc('redeem_tester_code', { p_code: entered });
+    currentUser = updated || currentUser;
+    closeRoleModal();
     updateAccountUI();
-    await loadAdminData();
-    setStatus(`RANG "${matchedRole.toUpperCase()}" AKTIVIERT!`);
+    setStatus(`RANG "${getEffectiveRole(currentUser).toUpperCase()}" AKTIVIERT!`);
   } catch (e) {
     msgEl.style.color = '#fca5a5';
-    msgEl.innerText = 'Fehler beim Speichern: ' + e.message;
+    msgEl.innerText = e.message || 'Ungültiger Tester-Code.';
   } finally {
     btn.disabled = false;
     btn.innerText = 'Aktivieren';
@@ -387,35 +458,8 @@ function switchAuthTab(mode) {
   document.getElementById('tab-register').classList.toggle('active', mode === 'register');
   document.getElementById('auth-modal-title').innerText =
     mode === 'login' ? 'Anmelden & Sounds bauen' : 'Neuen SVENTEKK Account erstellen';
-  document.getElementById('vip-field').style.display = mode === 'register' ? 'flex' : 'none';
+  document.getElementById('role-code-field').style.display = mode === 'register' ? 'flex' : 'none';
   document.getElementById('auth-error').innerText = '';
-}
-
-async function syncUserReset(user) {
-  if (!user) return null;
-  const now = Date.now();
-  let changed = false;
-
-  if (!user.window_start || now - Number(user.window_start) >= RESET_WINDOW_MS) {
-    user.credits_used = 0;
-    user.window_start = now;
-    changed = true;
-  }
-
-  const dq = getDeviceQuota();
-  if (!hasUnlimitedExports(user) && dq.used > user.credits_used) {
-    user.credits_used = Math.min(FREE_CREDITS_MAX, dq.used);
-    user.window_start = dq.windowStart;
-    changed = true;
-  }
-
-  if (changed) {
-    sbUpdateUser(user.username, {
-      credits_used: user.credits_used,
-      window_start: user.window_start
-    }).catch(() => {});
-  }
-  return user;
 }
 
 function updateAccountUI() {
@@ -424,10 +468,10 @@ function updateAccountUI() {
   const roleBadgeEl = document.getElementById('ui-role-badge');
   const timerEl = document.getElementById('ui-reset-timer');
   const badgeEl = document.getElementById('ui-credits-badge');
-  const vipCodeBtn = document.getElementById('btn-vip-code');
+  const roleCodeBtn = document.getElementById('btn-role-code');
   const loginBtn = document.getElementById('btn-open-login');
   const logoutBtn = document.getElementById('btn-logout');
-  const adminPanel = document.getElementById('vip-admin-panel');
+  const adminPanel = document.getElementById('admin-panel');
   const fbUserHint = document.getElementById('feedback-user-hint');
 
   if (!currentUser) {
@@ -438,21 +482,22 @@ function updateAccountUI() {
     timerEl.innerText = 'Anmelden für 5 Gratis-.WAV Exporte / 24h';
     badgeEl.innerText = 'LOGIN NÖTIG';
     badgeEl.className = 'credit-badge empty';
-    vipCodeBtn.style.display = 'none';
+    roleCodeBtn.style.display = 'none';
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
     adminPanel.style.display = 'none';
+    updateDevDownloadCounterVisibility();
     if (fbUserHint) fbUserHint.innerText = 'Wird gesendet als: Gast';
     return;
   }
 
   const role = getEffectiveRole(currentUser);
-  avatarEl.innerText = currentUser.username.charAt(0).toUpperCase();
-  nameEl.innerText = currentUser.username;
+  avatarEl.innerText = (currentUser.username || '?').charAt(0).toUpperCase();
+  nameEl.innerText = currentUser.username || 'User';
   roleBadgeEl.innerText = role.toUpperCase();
   roleBadgeEl.className = `role-tag role-${role}`;
 
-  vipCodeBtn.style.display = role === 'entwickler' ? 'none' : 'inline-block';
+  roleCodeBtn.style.display = (role === 'tester' || role === 'entwickler') ? 'none' : 'inline-block';
   loginBtn.style.display = 'none';
   logoutBtn.style.display = 'inline-block';
   if (fbUserHint) fbUserHint.innerText = `Wird gesendet als: ${currentUser.username} (${role})`;
@@ -465,18 +510,21 @@ function updateAccountUI() {
   } else {
     adminPanel.style.display = 'none';
   }
+  updateDevDownloadCounterVisibility();
 
   if (hasUnlimitedExports(currentUser)) {
     badgeEl.innerText = `∞ ${role.toUpperCase()}`;
-    badgeEl.className = 'credit-badge vip';
+    badgeEl.className = 'credit-badge unlimited';
     timerEl.innerText = `Rang "${role.toUpperCase()}" aktiv – unbegrenzte Studio-Exporte`;
     return;
   }
 
-  const used = Number(currentUser.credits_used || 0);
-  const winStart = Number(currentUser.window_start || Date.now());
+  const now = Date.now();
+  const winStart = Number(currentUser.window_start || now);
+  const expired = now - winStart >= RESET_WINDOW_MS;
+  const used = expired ? 0 : Number(currentUser.credits_used || 0);
   const remaining = Math.max(0, FREE_CREDITS_MAX - used);
-  const msLeft = (winStart + RESET_WINDOW_MS) - Date.now();
+  const msLeft = (winStart + RESET_WINDOW_MS) - now;
   const timeStr = formatTimeLeft(msLeft);
 
   badgeEl.innerText = `${remaining} / ${FREE_CREDITS_MAX} FREE`;
@@ -500,16 +548,14 @@ async function assignUserRole(targetUsername) {
   if (!selectEl) return;
 
   const newRole = selectEl.value;
-  const isVipFlag = newRole !== 'free';
 
   try {
-    await sbUpdateUser(targetUsername, {
-      role: newRole,
-      is_vip: isVipFlag
+    const updated = await sbRpc('set_user_role', {
+      p_target_username: targetUsername,
+      p_new_role: newRole
     });
-    if (currentUser && currentUser.username === targetUsername) {
-      currentUser.role = newRole;
-      currentUser.is_vip = isVipFlag;
+    if (currentUser && currentUser.username === targetUsername && updated) {
+      currentUser = updated;
       updateAccountUI();
     }
     setStatus(`RANG VON ${targetUsername.toUpperCase()} -> ${newRole.toUpperCase()}`);
@@ -524,10 +570,13 @@ async function loadAdminData() {
   const tbodyUsers = document.getElementById('admin-users-tbody');
   const tbodyFb = document.getElementById('admin-feedback-tbody');
   const allowRoleEdit = canEditUserRoles(currentUser);
+  const token = await getValidAccessToken();
+
+  if (!token) return;
 
   try {
-    const resU = await fetch(`${SUPABASE_URL}/rest/v1/studio_users?select=username,role,is_vip,credits_used,last_login&order=last_login.desc`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    const resU = await fetch(`${SUPABASE_URL}/rest/v1/studio_profiles?select=username,role,credits_used,last_login&order=last_login.desc`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` }
     });
     if (!resU.ok) throw new Error(`HTTP ${resU.status}`);
     const users = await resU.json();
@@ -542,7 +591,6 @@ async function loadAdminData() {
         ? `<div style="display:flex; gap:6px; align-items:center;">
              <select id="role-sel-${safeUser}" class="role-select">
                <option value="free" ${r === 'free' ? 'selected' : ''}>free</option>
-               <option value="vip" ${r === 'vip' ? 'selected' : ''}>vip</option>
                <option value="tester" ${r === 'tester' ? 'selected' : ''}>tester</option>
                <option value="entwickler" ${r === 'entwickler' ? 'selected' : ''}>entwickler</option>
              </select>
@@ -565,7 +613,7 @@ async function loadAdminData() {
 
   try {
     const resF = await fetch(`${SUPABASE_URL}/rest/v1/studio_feedback?select=*&order=created_at.desc&limit=30`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` }
     });
     if (!resF.ok) throw new Error(`HTTP ${resF.status}`);
     const fbs = await resF.json();
@@ -620,16 +668,17 @@ async function submitFeedback() {
   };
 
   try {
+    const token = await getValidAccessToken();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/studio_feedback`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new Error(await parseErrorMessage(res));
 
     msgEl.value = '';
     statusEl.style.color = '#6ee7b7';
