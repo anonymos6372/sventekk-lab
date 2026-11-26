@@ -11,9 +11,9 @@ const KICK_PRESETS = {
 };
 
 const UPTEMPO_PRESETS = {
-  piep:   { label: 'PIEP KICK',   start: 1120, end: 64, zaag: 0.25, snap: 18, drive: 24, dauer: 0.24 },
-  zaag:   { label: 'ZAAG KICK',   start: 420,  end: 50, zaag: 0.90, snap: 38, drive: 28, dauer: 0.32 },
-  terror: { label: 'TERROR 230+', start: 1280, end: 72, zaag: 0.95, snap: 14, drive: 38, dauer: 0.22 }
+  piep:   { label: 'PIEP KICK',   start: 1150, end: 64, zaag: 0.45, snap: 24, drive: 32, dauer: 0.25 },
+  zaag:   { label: 'ZAAG KICK',   start: 680,  end: 52, zaag: 1.25, snap: 28, drive: 36, dauer: 0.30 },
+  terror: { label: 'TERROR 230+', start: 1320, end: 70, zaag: 1.05, snap: 15, drive: 44, dauer: 0.21 }
 };
 
 const BASS_PRESETS = {
@@ -36,6 +36,13 @@ const MELODY_SCALES = {
   harmonic: [196.00, 220.00, 233.08, 261.63, 293.66, 311.13, 369.99, 392.00],
   cminor:   [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08, 261.63],
   major:    [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+};
+
+const MELODY_SYNTH_PRESETS = {
+  supersaw: { label: 'SUPERSAW', detune: 22, release: 0.24, cutoff: 3800 },
+  acid303:  { label: 'ACID 303', detune: 10, release: 0.16, cutoff: 2600 },
+  screech:  { label: 'SCREECH',  detune: 28, release: 0.20, cutoff: 4200 },
+  pluck:    { label: 'PLUCK',    detune: 14, release: 0.30, cutoff: 4800 }
 };
 
 const MELODY_PATTERNS = {
@@ -62,29 +69,40 @@ const sequenceGrid = [
 ];
 
 const presetSamples = [
-  { title: 'SVENTEKK_Hard_Kick_180BPM.wav', type: 'Hard Kick', generator: 'hardtekk' },
-  { title: 'SVENTEKK_Uptempo_Zaag_210.wav', type: 'Zaag Kick', generator: 'uptempo_zaag' },
-  { title: 'SVENTEKK_Uptempo_Piep_220.wav', type: 'Piep Kick', generator: 'uptempo_piep' },
-  { title: 'SVENTEKK_Sub_Bass_55Hz.wav', type: 'Sub Bass', generator: 'bass' },
-  { title: 'SVENTEKK_Rave_Phrase_4Bars.wav', type: 'Melodie', generator: 'melody' }
+  { title: 'K_HARD_240.wav', type: 'Hard Kick', generator: 'hardtekk' },
+  { title: 'UP_ZAAG_52.wav', type: 'Zaag Kick', generator: 'uptempo_zaag' },
+  { title: 'UP_PIEP_64.wav', type: 'Piep Kick', generator: 'uptempo_piep' },
+  { title: 'B_SUB_55.wav',   type: 'Sub Bass',  generator: 'bass' },
+  { title: 'MEL_4T_180.wav', type: 'Melodie',   generator: 'melody' }
 ];
 
 const DOWNLOAD_COUNT_KEY = 'sventekk_wav_download_v1';
 
 let audioCtx = null;
 let masterLimiter = null;
+let masterAnalyser = null;
+let scopeData = null;
 let sharedEchoBus = null;
 let melodyEchoBus = null;
+let recordedTagBuffer = null;
+let isRecordingTag = false;
+let availableVoices = [];
+let activeUtterance = null;
+let speechKeepAliveTimer = null;
+let speechStartTimer = null;
 let isPlaying = false;
+let isMelodyPlaying = false;
 let currentStep = 0;
 let seqMelodyStepIndex = 0;
 let stepTimer = null;
 let melodyLoopTimer = null;
 let melodySessionId = 0;
+const activeMelodyPreviewNodes = [];
 let activeKickMode = 'hard';
 let activeUptempoMode = 'zaag';
 let activeBassMode = 'sub';
 let activeSnareMode = 'snare';
+let activeMelodySynth = 'supersaw';
 let currentMelodyIndices = [...MELODY_PATTERNS.offbeat];
 
 function getAudioCtx() {
@@ -96,7 +114,11 @@ function getAudioCtx() {
     masterLimiter.ratio.setValueAtTime(16.0, audioCtx.currentTime);
     masterLimiter.attack.setValueAtTime(0.002, audioCtx.currentTime);
     masterLimiter.release.setValueAtTime(0.08, audioCtx.currentTime);
-    masterLimiter.connect(audioCtx.destination);
+    masterAnalyser = audioCtx.createAnalyser();
+    masterAnalyser.fftSize = 512;
+    scopeData = new Uint8Array(masterAnalyser.fftSize);
+    masterLimiter.connect(masterAnalyser);
+    masterAnalyser.connect(audioCtx.destination);
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
@@ -250,14 +272,16 @@ function initAllControlBindings() {
   bindSliderAndNumber('snare_drive', 'num-snare-drive');
   bindSliderAndNumber('hat_hits', 'num-hat-hits');
 
+  bindSliderAndNumber('melody_bars', 'num-mel-bars', () => updateMelodyDurationUI());
   bindSliderAndNumber('melody_gate', 'num-mel-gate');
-  bindSliderAndNumber('mel_attack', 'num-mel-attack');
-  bindSliderAndNumber('mel_release', 'num-mel-rel');
   bindSliderAndNumber('mel_cutoff', 'num-mel-cutoff');
-  bindSliderAndNumber('mel_detune', 'num-mel-detune');
+  bindSliderAndNumber('tag_pitch', 'num-tag-pitch');
+  bindSliderAndNumber('tag_speed', 'num-tag-speed');
+  bindSliderAndNumber('tag_drive', 'num-tag-drive');
 
   bindSliderAndNumber('bpm', 'num-bpm', (val) => {
     document.getElementById('header-bpm').innerText = val;
+    updateMelodyDurationUI();
   });
 }
 
@@ -273,7 +297,7 @@ function setKickMode(mode) {
   if (!p) return;
   activeKickMode = mode;
 
-  document.querySelectorAll('.style-btn:not(.up-style):not(.bass-style):not(.snare-style)').forEach(btn => {
+  document.querySelectorAll('.style-btn:not(.up-style):not(.bass-style):not(.snare-style):not(.mel-style)').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   document.getElementById('kick-mode-badge').innerText = p.label;
@@ -345,6 +369,41 @@ function setSnareMode(mode) {
   setStatus(`SNARE MODUS: ${p.label}`);
 }
 
+function getMelodyBars() {
+  const raw = parseInt(document.getElementById('melody_bars')?.value || '4', 10);
+  if (Number.isNaN(raw)) return 4;
+  return Math.max(1, Math.min(16, raw));
+}
+
+function getMelodyPreset() {
+  return MELODY_SYNTH_PRESETS[activeMelodySynth] || MELODY_SYNTH_PRESETS.supersaw;
+}
+
+function updateMelodyDurationUI() {
+  const infoEl = document.getElementById('melody-duration-info');
+  if (!infoEl) return;
+  const bpm = parseFloat(document.getElementById('bpm')?.value) || 180;
+  const bars = getMelodyBars();
+  const stepSec = (60 / bpm) / 2;
+  const sec = bars * 8 * stepSec;
+  infoEl.innerText = `~${sec.toFixed(1)} s`;
+}
+
+function setMelodySynth(mode) {
+  const p = MELODY_SYNTH_PRESETS[mode];
+  if (!p) return;
+  activeMelodySynth = mode;
+
+  document.querySelectorAll('.mel-style').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.melmode === mode);
+  });
+  const badge = document.getElementById('melody-mode-badge');
+  if (badge) badge.innerText = p.label;
+
+  setControlValue('mel_cutoff', 'num-mel-cutoff', p.cutoff);
+  setStatus(`MELODIE SOUND: ${p.label}`);
+}
+
 /* =========================================================================
    3. SOUND-SYNTHESE (KICKS, UPTEMPO, BASS, DRUMS, MELODIE)
    ========================================================================= */
@@ -366,7 +425,7 @@ function createRaveEchoBus(ctx, dest, stepSec) {
 
 function getActiveMelodyFrequencies() {
   const scaleKey = document.getElementById('melody_scale')?.value || 'phrygian';
-  const bars = parseInt(document.getElementById('melody_bars')?.value || '4', 10);
+  const bars = getMelodyBars();
   const scale = MELODY_SCALES[scaleKey] || MELODY_SCALES.phrygian;
 
   const phrase = [];
@@ -434,16 +493,20 @@ function makeDistortionCurve(amount, mode = 'soft') {
   for (let i = 0; i < n; ++i) {
     const x = (i * 2) / n - 1;
     if (mode === 'piep') {
-      const folded = Math.sin(x * Math.PI * 2.4) * 0.75 + Math.tanh(x * (k / 7)) * 0.85;
-      curve[i] = Math.max(-0.96, Math.min(0.96, folded));
+      const asym = x >= 0 ? x * (1 + k / 10) : x * (1 + k / 15);
+      const clipped = Math.max(-0.92, Math.min(0.92, Math.tanh(asym) * 1.35));
+      curve[i] = Math.max(-0.96, Math.min(0.96, clipped + Math.sin(clipped * Math.PI * 1.5) * 0.14));
     } else if (mode === 'zaag') {
-      const sawTooth = (x * (1 + k / 6)) % 2;
-      const rawZaag = sawTooth > 1 ? sawTooth - 2 : sawTooth;
-      const folded = rawZaag * 0.8 + Math.sin(x * Math.PI * 3.0) * 0.45;
-      curve[i] = Math.max(-0.98, Math.min(0.98, folded));
+      const asym = x >= 0 ? x * (1.8 + k / 6) : x * (1.1 + k / 9) - 0.08;
+      const hard = Math.max(-0.88, Math.min(0.88, asym));
+      const grit = Math.tanh(x * (k / 5)) * 0.65 + hard * 0.55;
+      curve[i] = Math.max(-0.98, Math.min(0.98, grit * 1.2));
     } else if (mode === 'terror') {
-      const hardClip = Math.max(-0.72, Math.min(0.72, x * (1.4 + k / 5)));
-      curve[i] = Math.sin(hardClip * 4.2) * 0.98;
+      const brick = Math.max(-0.82, Math.min(0.82, x * (2.5 + k / 4)));
+      curve[i] = Math.max(-0.98, Math.min(0.98, brick * 1.18));
+    } else if (mode === 'hardclip') {
+      const hc = x * (1.6 + k / 8);
+      curve[i] = Math.max(-0.94, Math.min(0.94, hc));
     } else if (mode === 'gabber' || mode === 'square') {
       curve[i] = Math.max(-0.92, Math.min(0.92, Math.tanh(x * (k / 14)) * 1.25));
     } else if (mode === 'industrial' || mode === 'schranz') {
@@ -630,31 +693,46 @@ function triggerBass(ctx, dest, params, startTime, trackIdx = null) {
   });
 }
 
-function stopMelodyPreview() {
+function setMelodyButtonState(playing) {
+  isMelodyPlaying = playing;
+  const btn = document.getElementById('btn-melody-play');
+  if (btn) {
+    btn.innerText = playing
+      ? (typeof t === 'function' ? t('m5_stop') : '■ Stoppen')
+      : (typeof t === 'function' ? t('m5_play') : '▶ Komplette Melodie anhören');
+  }
+}
+
+function stopMelodyPreview(silent = false) {
   melodySessionId += 1;
   if (melodyLoopTimer) {
     clearTimeout(melodyLoopTimer);
     melodyLoopTimer = null;
   }
+  while (activeMelodyPreviewNodes.length > 0) {
+    const fn = activeMelodyPreviewNodes.pop();
+    try { fn(); } catch (e) {}
+  }
   while (activeNodesByTrack[5].length > 0) {
     const fn = activeNodesByTrack[5].pop();
     try { fn(); } catch (e) {}
   }
-  setStatus('MELODIE GESTOPPT');
+  setMelodyButtonState(false);
+  if (!silent) setStatus('MELODIE GESTOPPT');
 }
 
-function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
-  const synthType = document.getElementById('melody_synth')?.value || 'supersaw';
-  const cutoff = parseFloat(document.getElementById('mel_cutoff')?.value || 3600);
-  const detune = parseFloat(document.getElementById('mel_detune')?.value || 22);
-  const rel = parseFloat(document.getElementById('mel_release')?.value || 0.25);
-  const attackMs = parseFloat(document.getElementById('mel_attack')?.value || 0);
+function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null, previewBucket = null) {
+  const preset = getMelodyPreset();
+  const synthType = activeMelodySynth;
+  const cutoff = parseFloat(document.getElementById('mel_cutoff')?.value || preset.cutoff);
+  const detune = preset.detune;
+  const rel = preset.release;
+  const attackSec = 0.006;
 
-  const attackSec = Math.max(0.001, attackMs / 1000);
-  const noteDur = Math.max(0.02, dur);
+  const noteDur = Math.max(0.03, dur);
   const t0 = Math.max(0, startTime);
-  const noteEnd = t0 + noteDur;
-  const totalEnd = noteEnd + Math.max(0.01, rel);
+  const sustainEnd = Math.max(t0 + attackSec + 0.01, t0 + noteDur);
+  const totalEnd = sustainEnd + Math.max(0.04, rel);
 
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
@@ -672,9 +750,9 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
     osc3.frequency.setValueAtTime(freq * 0.5, t0);
 
     filter.type = 'lowpass';
-    filter.Q.setValueAtTime(14, t0);
+    filter.Q.setValueAtTime(12, t0);
     filter.frequency.setValueAtTime(Math.min(10000, cutoff * 1.4), t0);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(120, cutoff * 0.2), totalEnd);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(140, cutoff * 0.25), totalEnd);
   } else if (synthType === 'screech') {
     osc1.type = 'sawtooth';
     osc2.type = 'square';
@@ -698,7 +776,7 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
 
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(Math.min(12000, cutoff * 1.8), t0);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(150, cutoff * 0.25), totalEnd);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(160, cutoff * 0.25), totalEnd);
   } else {
     osc1.type = 'sawtooth';
     osc2.type = 'sawtooth';
@@ -711,16 +789,12 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
 
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(cutoff, t0);
-    filter.Q.setValueAtTime(4, t0);
+    filter.Q.setValueAtTime(3.5, t0);
   }
 
-  if (attackMs <= 2) {
-    gain.gain.setValueAtTime(0.42, t0);
-  } else {
-    gain.gain.setValueAtTime(0.0008, t0);
-    gain.gain.linearRampToValueAtTime(0.42, t0 + attackSec);
-  }
-  gain.gain.setValueAtTime(0.36, Math.max(t0 + attackSec + 0.005, noteEnd));
+  gain.gain.setValueAtTime(0.0008, t0);
+  gain.gain.linearRampToValueAtTime(0.42, t0 + attackSec);
+  gain.gain.linearRampToValueAtTime(0.36, sustainEnd);
   gain.gain.exponentialRampToValueAtTime(0.0008, totalEnd);
 
   osc1.connect(filter);
@@ -736,7 +810,7 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
   osc2.stop(totalEnd + 0.02);
   osc3.stop(totalEnd + 0.02);
 
-  registerVoice(trackIdx, () => {
+  const stopFn = () => {
     try {
       gain.gain.cancelScheduledValues(ctx.currentTime);
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -744,7 +818,13 @@ function triggerLeadNote(ctx, dest, freq, dur, startTime, trackIdx = null) {
       osc2.stop();
       osc3.stop();
     } catch (e) {}
-  });
+  };
+
+  if (Array.isArray(previewBucket)) {
+    previewBucket.push(stopFn);
+  } else {
+    registerVoice(trackIdx, stopFn);
+  }
 }
 
 function triggerSnare(ctx, dest, params, startTime, trackIdx = null) {
@@ -821,86 +901,205 @@ function triggerSnare(ctx, dest, params, startTime, trackIdx = null) {
 function triggerUptempoKick(ctx, dest, params, startTime, trackIdx = null) {
   const {
     mode = activeUptempoMode,
-    startHz,
-    endHz,
-    zaag = 0.9,
-    snapMs = 38,
-    drive = 28,
-    duration = 0.32
+    startHz = 680,
+    endHz = 52,
+    zaag = 1.25,
+    snapMs = 28,
+    drive = 36,
+    duration = 0.30
   } = params;
 
-  const snapSec = Math.max(0.01, snapMs / 1000);
-  const modeMult = mode === 'piep' ? 1.3 : mode === 'terror' ? 1.45 : 1.0;
+  const t0 = Math.max(0, startTime);
+  const snapSec = Math.max(0.01, Math.min(duration * 0.45, snapMs / 1000));
+  const tailStart = t0 + snapSec * 0.55;
 
+  // 1. Haupt-Body & Sub-Punch (schneller Uptempo-Pitch-Drop)
   const bodyOsc = ctx.createOscillator();
-  bodyOsc.type = mode === 'terror' ? 'square' : 'triangle';
-  bodyOsc.frequency.setValueAtTime(startHz * modeMult, startTime);
-  bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(36, endHz * 1.25), startTime + snapSec);
-  bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(30, endHz), startTime + duration);
+  bodyOsc.type = mode === 'terror' ? 'triangle' : 'sine';
+  const bodyTop = mode === 'piep'
+    ? Math.max(1100, startHz * 2.1)
+    : mode === 'terror'
+      ? Math.max(1300, startHz * 1.9)
+      : Math.max(620, startHz * 1.35);
+  const bodyKnee = mode === 'piep'
+    ? Math.max(88, endHz * 1.65)
+    : mode === 'terror'
+      ? Math.max(76, endHz * 1.35)
+      : Math.max(58, endHz * 1.2);
+  bodyOsc.frequency.setValueAtTime(bodyTop, t0);
+  bodyOsc.frequency.exponentialRampToValueAtTime(bodyKnee, t0 + snapSec);
+  bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(32, endHz), t0 + duration * 0.85);
+  bodyOsc.frequency.setValueAtTime(Math.max(32, endHz), t0 + duration);
 
-  const zaagOsc = ctx.createOscillator();
-  zaagOsc.type = 'sawtooth';
-  const zaagTop = mode === 'zaag'
-    ? Math.max(120, startHz * 0.75)
-    : mode === 'piep'
-      ? startHz * 1.25
-      : startHz * 0.95;
-  const zaagTarget = mode === 'zaag'
-    ? Math.max(32, endHz * 0.95)
-    : Math.max(45, endHz);
-  const zaagDropTime = mode === 'zaag'
-    ? Math.min(duration * 0.75, snapSec * 1.8)
-    : Math.min(duration * 0.85, snapSec * 2.2);
+  const bodyGain = ctx.createGain();
+  bodyGain.gain.setValueAtTime(1.15, t0);
+  bodyGain.gain.setValueAtTime(mode === 'zaag' ? 0.95 : 1.05, t0 + duration * 0.72);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
 
-  zaagOsc.frequency.setValueAtTime(zaagTop, startTime);
-  zaagOsc.frequency.exponentialRampToValueAtTime(zaagTarget, startTime + zaagDropTime);
+  // 2. Dedizierter Piep-/Tok-Transient (knackiger Uptempo-Anschlag)
+  const tokOsc = ctx.createOscillator();
+  tokOsc.type = mode === 'piep' ? 'sine' : 'triangle';
+  const tokStartHz = mode === 'piep'
+    ? Math.max(1600, startHz * 2.4)
+    : mode === 'terror'
+      ? Math.max(1500, startHz * 2.0)
+      : Math.max(900, startHz * 1.6);
+  const tokEndHz = mode === 'piep'
+    ? Math.max(320, startHz * 0.42)
+    : Math.max(160, startHz * 0.25);
+  const tokLen = Math.min(duration * 0.4, snapSec * (mode === 'piep' ? 1.55 : 1.15));
+  tokOsc.frequency.setValueAtTime(tokStartHz, t0);
+  tokOsc.frequency.exponentialRampToValueAtTime(tokEndHz, t0 + tokLen);
+
+  const tokFilter = ctx.createBiquadFilter();
+  tokFilter.type = 'peaking';
+  tokFilter.frequency.setValueAtTime(mode === 'piep' ? 1850 : 1250, t0);
+  tokFilter.Q.setValueAtTime(mode === 'piep' ? 3.2 : 1.8, t0);
+  tokFilter.gain.setValueAtTime(mode === 'piep' ? 14 : 9, t0);
+
+  const tokGain = ctx.createGain();
+  const tokLevel = mode === 'piep' ? 1.25 : mode === 'terror' ? 1.1 : 0.85;
+  tokGain.gain.setValueAtTime(tokLevel, t0);
+  tokGain.gain.exponentialRampToValueAtTime(0.001, t0 + tokLen);
+
+  // 3. Zaag-Säge / Uptempo-Tail-Oszillatoren (setzen direkt hinter dem Tok ein!)
+  const zaagOsc1 = ctx.createOscillator();
+  const zaagOsc2 = ctx.createOscillator();
+  zaagOsc1.type = 'sawtooth';
+  zaagOsc2.type = mode === 'terror' ? 'square' : 'sawtooth';
+
+  const zaagBaseHz = Math.max(36, endHz * (mode === 'zaag' ? 1.0 : mode === 'piep' ? 1.5 : 1.0));
+  zaagOsc1.frequency.setValueAtTime(zaagBaseHz * 1.18, t0);
+  zaagOsc1.frequency.exponentialRampToValueAtTime(zaagBaseHz, tailStart + 0.03);
+  zaagOsc2.frequency.setValueAtTime(zaagBaseHz * 2.0, t0);
+  zaagOsc2.frequency.exponentialRampToValueAtTime(zaagBaseHz * (mode === 'zaag' ? 1.0 : 2.0), tailStart + 0.03);
+  zaagOsc1.detune.setValueAtTime(mode === 'zaag' ? -18 : -8, t0);
+  zaagOsc2.detune.setValueAtTime(mode === 'zaag' ? 22 : 12, t0);
 
   const zaagFilter = ctx.createBiquadFilter();
   if (mode === 'zaag') {
-    zaagFilter.type = 'lowpass';
-    zaagFilter.frequency.setValueAtTime(1600, startTime);
-    zaagFilter.frequency.exponentialRampToValueAtTime(260, startTime + duration * 0.9);
-    zaagFilter.Q.setValueAtTime(2.2, startTime);
+    zaagFilter.type = 'bandpass';
+    zaagFilter.frequency.setValueAtTime(980, t0);
+    zaagFilter.frequency.exponentialRampToValueAtTime(520, t0 + duration);
+    zaagFilter.Q.setValueAtTime(1.1, t0);
+  } else if (mode === 'piep') {
+    zaagFilter.type = 'bandpass';
+    zaagFilter.frequency.setValueAtTime(1950, t0);
+    zaagFilter.frequency.exponentialRampToValueAtTime(1150, t0 + duration);
+    zaagFilter.Q.setValueAtTime(2.6, t0);
   } else {
-    zaagFilter.type = mode === 'piep' ? 'bandpass' : 'highpass';
-    zaagFilter.frequency.setValueAtTime(mode === 'piep' ? 2000 : 280, startTime);
-    zaagFilter.frequency.exponentialRampToValueAtTime(mode === 'piep' ? 950 : 140, startTime + duration * 0.85);
-    zaagFilter.Q.setValueAtTime(mode === 'piep' ? 3.2 : 1.4, startTime);
+    zaagFilter.type = 'highpass';
+    zaagFilter.frequency.setValueAtTime(220, t0);
+    zaagFilter.Q.setValueAtTime(1.2, t0);
   }
 
   const zaagGain = ctx.createGain();
-  const zaagAmt = Math.max(0.001, zaag * (mode === 'piep' ? 0.7 : 0.92));
-  zaagGain.gain.setValueAtTime(zaagAmt, startTime);
-  zaagGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.95);
+  const zaagLevel = Math.max(0.001, zaag * (mode === 'zaag' ? 1.15 : mode === 'piep' ? 0.65 : 0.95));
+  zaagGain.gain.setValueAtTime(0.001, t0);
+  zaagGain.gain.linearRampToValueAtTime(zaagLevel, tailStart);
+  zaagGain.gain.setValueAtTime(zaagLevel * 0.92, t0 + duration * 0.78);
+  zaagGain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
 
-  const shaper = ctx.createWaveShaper();
-  shaper.curve = makeDistortionCurve(drive, mode);
-  shaper.oversample = '4x';
+  // 4. Zweistufige Hardcore-Distortion-Kette (EQ -> Clip 1 -> Hollow/Bite EQ -> Brickwall Clip 2)
+  const preEq = ctx.createBiquadFilter();
+  preEq.type = 'peaking';
+  preEq.frequency.setValueAtTime(mode === 'piep' ? 1600 : mode === 'zaag' ? 210 : 950, t0);
+  preEq.Q.setValueAtTime(mode === 'piep' ? 2.4 : 1.4, t0);
+  preEq.gain.setValueAtTime(mode === 'piep' ? 12 : mode === 'zaag' ? 10 : 11, t0);
 
+  const shaper1 = ctx.createWaveShaper();
+  shaper1.curve = makeDistortionCurve(drive, mode);
+  shaper1.oversample = '4x';
+
+  const midScoop = ctx.createBiquadFilter();
+  midScoop.type = 'peaking';
+  midScoop.frequency.setValueAtTime(mode === 'zaag' ? 420 : 380, t0);
+  midScoop.Q.setValueAtTime(1.4, t0);
+  midScoop.gain.setValueAtTime(mode === 'zaag' ? -4.5 : -6.0, t0);
+
+  const biteEq = ctx.createBiquadFilter();
+  biteEq.type = 'peaking';
+  biteEq.frequency.setValueAtTime(mode === 'piep' ? 2450 : mode === 'zaag' ? 1850 : 2100, t0);
+  biteEq.Q.setValueAtTime(1.5, t0);
+  biteEq.gain.setValueAtTime(mode === 'piep' ? 9.5 : mode === 'zaag' ? 8.5 : 10.0, t0);
+
+  const shaper2 = ctx.createWaveShaper();
+  shaper2.curve = makeDistortionCurve(Math.max(12, drive * 0.75), 'hardclip');
+  shaper2.oversample = '4x';
+
+  const subTightHp = ctx.createBiquadFilter();
+  subTightHp.type = 'highpass';
+  subTightHp.frequency.setValueAtTime(34, t0);
+
+  const fizzLp = ctx.createBiquadFilter();
+  fizzLp.type = 'lowpass';
+  fizzLp.frequency.setValueAtTime(mode === 'zaag' ? 9800 : 11500, t0);
+
+  // 5. Sauberer Sub-Anker für Druck auf Korg / Club-Anlagen
+  const subAnchor = ctx.createOscillator();
+  subAnchor.type = 'sine';
+  subAnchor.frequency.setValueAtTime(Math.max(42, endHz * 1.4), t0);
+  subAnchor.frequency.exponentialRampToValueAtTime(Math.max(34, endHz), t0 + snapSec);
+  const subAnchorGain = ctx.createGain();
+  subAnchorGain.gain.setValueAtTime(0.001, t0);
+  subAnchorGain.gain.linearRampToValueAtTime(mode === 'zaag' ? 0.42 : 0.34, tailStart);
+  subAnchorGain.gain.setValueAtTime(mode === 'zaag' ? 0.38 : 0.30, t0 + duration * 0.78);
+  subAnchorGain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+
+  // 6. Straffe Uptempo-Master-Hüllkurve (voll laut bis kurz vor Schluss, dann sauberer Cut)
   const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.001, startTime);
-  masterGain.gain.linearRampToValueAtTime(0.98, startTime + 0.002);
-  masterGain.gain.setValueAtTime(0.92, startTime + Math.max(0.04, duration * 0.65));
-  masterGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  masterGain.gain.setValueAtTime(0.001, t0);
+  masterGain.gain.linearRampToValueAtTime(0.98, t0 + 0.0015);
+  masterGain.gain.setValueAtTime(0.95, t0 + Math.max(0.04, duration * 0.8));
+  masterGain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
 
-  bodyOsc.connect(shaper);
-  zaagOsc.connect(zaagFilter);
+  bodyOsc.connect(bodyGain);
+  bodyGain.connect(preEq);
+
+  tokOsc.connect(tokFilter);
+  tokFilter.connect(tokGain);
+  tokGain.connect(preEq);
+
+  zaagOsc1.connect(zaagFilter);
+  zaagOsc2.connect(zaagFilter);
   zaagFilter.connect(zaagGain);
-  zaagGain.connect(shaper);
-  shaper.connect(masterGain);
+  zaagGain.connect(preEq);
+
+  preEq.connect(shaper1);
+  shaper1.connect(midScoop);
+  midScoop.connect(biteEq);
+  biteEq.connect(shaper2);
+  shaper2.connect(subTightHp);
+  subTightHp.connect(fizzLp);
+  fizzLp.connect(masterGain);
+
+  subAnchor.connect(subAnchorGain);
+  subAnchorGain.connect(masterGain);
+
   masterGain.connect(dest);
 
-  bodyOsc.start(startTime);
-  zaagOsc.start(startTime);
-  bodyOsc.stop(startTime + duration + 0.02);
-  zaagOsc.stop(startTime + duration + 0.02);
+  const stopAt = t0 + duration + 0.02;
+  bodyOsc.start(t0);
+  tokOsc.start(t0);
+  zaagOsc1.start(t0);
+  zaagOsc2.start(t0);
+  subAnchor.start(t0);
+
+  bodyOsc.stop(stopAt);
+  tokOsc.stop(t0 + tokLen + 0.02);
+  zaagOsc1.stop(stopAt);
+  zaagOsc2.stop(stopAt);
+  subAnchor.stop(stopAt);
 
   registerVoice(trackIdx, () => {
     try {
       masterGain.gain.cancelScheduledValues(ctx.currentTime);
       masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
       bodyOsc.stop();
-      zaagOsc.stop();
+      tokOsc.stop();
+      zaagOsc1.stop();
+      zaagOsc2.stop();
+      subAnchor.stop();
     } catch (e) {}
   });
 }
@@ -936,15 +1135,28 @@ function audioBufferToWav(buffer) {
   return new Blob([out], { type: 'audio/wav' });
 }
 
+function shortTag(map, key, fallback) {
+  return map[key] || fallback;
+}
+
 function downloadHardtekkKick() {
   const p = getHardtekkParams();
-  renderAndDownload(p.duration + 0.05, `SVENTEKK_${p.mode}_Kick_${p.startHz}Hz.wav`,
+  const tag = shortTag({
+    soft: 'SOFT',
+    hard: 'HARD',
+    industrial: 'IND',
+    gabber: 'GAB',
+    schranz: 'SCHR',
+    hardtechno: 'HTEC'
+  }, p.mode, 'KICK');
+  renderAndDownload(p.duration + 0.05, `K_${tag}_${Math.round(p.startHz)}.wav`,
     (ctx, dest) => triggerKick(ctx, dest, p, 0));
 }
 
 function downloadBass() {
   const p = getBassParams();
-  renderAndDownload(p.duration + 0.05, `SVENTEKK_${p.mode}_Bass_${p.freq}Hz.wav`,
+  const tag = shortTag({ sub: 'SUB', offbeat: 'SAW', reese: 'REE' }, p.mode, 'BAS');
+  renderAndDownload(p.duration + 0.05, `B_${tag}_${Math.round(p.freq)}.wav`,
     (ctx, dest) => triggerBass(ctx, dest, p, 0));
 }
 
@@ -952,20 +1164,21 @@ function downloadHatRoll() {
   const hits = parseInt(document.getElementById('hat_hits').value, 10);
   const bpm = parseFloat(document.getElementById('bpm').value);
   const stepSec = (60 / bpm) / 4;
-  renderAndDownload(hits * stepSec + 0.2, `SVENTEKK_HatRoll_${hits}x.wav`, (ctx, dest) => {
+  renderAndDownload(hits * stepSec + 0.2, `HAT_${hits}X.wav`, (ctx, dest) => {
     for (let i = 0; i < hits; i++) triggerHiHat(ctx, dest, i * stepSec, i === hits - 1);
   });
 }
 
 function downloadMelody() {
-  const bpm = parseFloat(document.getElementById('bpm').value) || 180;
+  const bpm = Math.round(parseFloat(document.getElementById('bpm').value) || 180);
+  const bars = getMelodyBars();
   const stepSec = (60 / bpm) / 2;
-  const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.95);
-  const rel = parseFloat(document.getElementById('mel_release')?.value || 0.25);
+  const gate = parseFloat(document.getElementById('melody_gate')?.value || 1.0);
+  const rel = getMelodyPreset().release;
   const notes = getActiveMelodyFrequencies();
   const totalDur = notes.length * stepSec + rel + 0.75;
 
-  renderAndDownload(totalDur, `SVENTEKK_Rave_Phrase_${bpm}BPM.wav`, (ctx, dest) => {
+  renderAndDownload(totalDur, `MEL_${bars}T_${bpm}.wav`, (ctx, dest) => {
     const chain = createEchoChain(ctx, dest, stepSec);
     notes.forEach((f, idx) => triggerLeadNote(ctx, chain.input, f, stepSec * gate, idx * stepSec));
   });
@@ -973,23 +1186,25 @@ function downloadMelody() {
 
 function downloadSnare() {
   const p = getSnareParams();
-  renderAndDownload(p.duration + 0.08, `SVENTEKK_${p.mode}_Snare_${p.toneHz}Hz.wav`,
+  const tag = shortTag({ snare: 'SNR', clap: 'CLP', rim: 'RIM' }, p.mode, 'SNR');
+  renderAndDownload(p.duration + 0.08, `${tag}_${Math.round(p.toneHz)}.wav`,
     (ctx, dest) => triggerSnare(ctx, dest, p, 0));
 }
 
 function downloadUptempoKick() {
   const p = getUptempoParams();
-  renderAndDownload(p.duration + 0.05, `SVENTEKK_Uptempo_${p.mode}_${p.startHz}Hz.wav`,
+  const tag = shortTag({ piep: 'PIEP', zaag: 'ZAAG', terror: 'TER' }, p.mode, 'UP');
+  renderAndDownload(p.duration + 0.05, `UP_${tag}_${Math.round(p.endHz)}.wav`,
     (ctx, dest) => triggerUptempoKick(ctx, dest, p, 0));
 }
 
 function downloadFullSequencer() {
-  const bpm = parseFloat(document.getElementById('bpm').value) || 180;
+  const bpm = Math.round(parseFloat(document.getElementById('bpm').value) || 180);
   const bars = parseInt(document.getElementById('seq_export_bars')?.value || '4', 10);
   const totalSteps = bars * 16;
   const stepSec = (60 / bpm) / 4;
-  const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.95);
-  const rel = parseFloat(document.getElementById('mel_release')?.value || 0.25);
+  const gate = parseFloat(document.getElementById('melody_gate')?.value || 1.0);
+  const rel = getMelodyPreset().release;
   const notes = getActiveMelodyFrequencies();
   const hardParams = getHardtekkParams();
   const upParams = getUptempoParams();
@@ -998,7 +1213,7 @@ function downloadFullSequencer() {
 
   const totalDur = totalSteps * stepSec + Math.max(0.8, rel + 0.6);
 
-  renderAndDownload(totalDur, `SVENTEKK_Full_Loop_${bars}Bars_${bpm}BPM.wav`, (ctx, dest) => {
+  renderAndDownload(totalDur, `LOOP_${bars}T_${bpm}.wav`, (ctx, dest) => {
     const out0 = getTrackOut(ctx, dest, 0);
     const out1 = getTrackOut(ctx, dest, 1);
     const out2 = getTrackOut(ctx, dest, 2);
@@ -1055,46 +1270,60 @@ async function playHatRoll() {
   const bpm = parseFloat(document.getElementById('bpm').value);
   const stepSec = (60 / bpm) / 4;
   for (let i = 0; i < hits; i++) {
-    triggerHiHat(ctx, getMasterOut(), ctx.currentTime + i * stepSec, i === hits - 1, 4);
+    triggerHiHat(ctx, getMasterOut(), ctx.currentTime + 0.02 + i * stepSec, i === hits - 1, null);
   }
   setStatus(`PLAYING: ${hits}x HAT ROLL`);
 }
 
-function scheduleMelodyPass(sessionId) {
-  if (sessionId !== melodySessionId) return;
-  const ctx = getAudioCtx();
-  const dest = getMasterOut();
-  const now = ctx.currentTime;
-
-  const bpm = parseFloat(document.getElementById('bpm').value) || 180;
-  const stepSec = (60 / bpm) / 2;
-  const gate = parseFloat(document.getElementById('melody_gate')?.value || 0.95);
-  const notes = getActiveMelodyFrequencies();
-  const echoBus = getSharedEchoBus(ctx, dest, stepSec);
-
-  for (let idx = 0; idx < notes.length; idx++) {
-    triggerLeadNote(ctx, echoBus, notes[idx], stepSec * gate, now + idx * stepSec, 5);
+function toggleMelodyPreview() {
+  if (isMelodyPlaying) {
+    stopMelodyPreview();
+  } else {
+    playMelody();
   }
-
-  setStatus(`PLAYING: ${notes.length}-NOTE RAVE PHRASE`);
-
-  melodyLoopTimer = setTimeout(() => {
-    if (sessionId === melodySessionId) {
-      scheduleMelodyPass(sessionId);
-    }
-  }, notes.length * stepSec * 1000);
 }
 
 async function playMelody() {
   if (!requireLoginOnly()) return;
-  await ensureAudioReady();
+  const ctx = await ensureAudioReady();
+  stopMelodyPreview(true);
+
   melodySessionId += 1;
   const currentSession = melodySessionId;
-  if (melodyLoopTimer) {
-    clearTimeout(melodyLoopTimer);
-    melodyLoopTimer = null;
+  const dest = getMasterOut();
+  const startBase = ctx.currentTime + 0.03;
+
+  const bpm = parseFloat(document.getElementById('bpm').value) || 180;
+  const bars = getMelodyBars();
+  const stepSec = (60 / bpm) / 2;
+  const gate = parseFloat(document.getElementById('melody_gate')?.value || 1.0);
+  const rel = getMelodyPreset().release;
+  const notes = getActiveMelodyFrequencies();
+  const echoBus = getSharedEchoBus(ctx, dest, stepSec);
+
+  for (let idx = 0; idx < notes.length; idx++) {
+    triggerLeadNote(
+      ctx,
+      echoBus,
+      notes[idx],
+      stepSec * gate,
+      startBase + idx * stepSec,
+      null,
+      activeMelodyPreviewNodes
+    );
   }
-  scheduleMelodyPass(currentSession);
+
+  const totalSec = notes.length * stepSec + rel + 0.2;
+  setMelodyButtonState(true);
+  setStatus(`MELODIE LÄUFT: ${bars} TAKTE (${(notes.length * stepSec).toFixed(1)}s)`);
+
+  melodyLoopTimer = setTimeout(() => {
+    if (currentSession === melodySessionId) {
+      activeMelodyPreviewNodes.length = 0;
+      setMelodyButtonState(false);
+      setStatus('MELODIE FERTIG');
+    }
+  }, Math.ceil(totalSec * 1000));
 }
 
 async function playSnare() {
@@ -1240,6 +1469,7 @@ function loadPresetPattern(type) {
     sequenceGrid[4] = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,1,1,1];
     sequenceGrid[5] = [1,1,0,1, 1,0,1,0, 1,1,0,1, 1,1,1,0];
   }
+  updateMelodyDurationUI();
   renderSequencerUI();
 }
 
@@ -1514,11 +1744,483 @@ function clearFixNotes() {
   }
 }
 
+/* =========================================================================
+   7. LIVE-OSZILLOSKOP, PRESET-SNAP & PRODUCER TAG / VOICE STUDIO
+   ========================================================================= */
+function initOscilloscope() {
+  const canvas = document.getElementById('studio-scope');
+  if (!canvas) return;
+  const ctx2d = canvas.getContext('2d');
+  if (!ctx2d) return;
+
+  function drawScope() {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx2d.fillStyle = '#07070b';
+    ctx2d.fillRect(0, 0, w, h);
+
+    // Dezente Mittellinie
+    ctx2d.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx2d.lineWidth = 1;
+    ctx2d.beginPath();
+    ctx2d.moveTo(0, h / 2);
+    ctx2d.lineTo(w, h / 2);
+    ctx2d.stroke();
+
+    if (masterAnalyser && scopeData && audioCtx && audioCtx.state === 'running') {
+      masterAnalyser.getByteTimeDomainData(scopeData);
+      let peak = 0;
+      for (let i = 0; i < scopeData.length; i++) {
+        const amp = Math.abs((scopeData[i] - 128) / 128);
+        if (amp > peak) peak = amp;
+      }
+
+      const grad = ctx2d.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, '#00f0ff');
+      grad.addColorStop(0.55, peak > 0.72 ? '#ff5500' : '#00f0ff');
+      grad.addColorStop(1, '#a855f7');
+
+      ctx2d.strokeStyle = grad;
+      ctx2d.lineWidth = peak > 0.04 ? 2.2 : 1.4;
+      ctx2d.beginPath();
+
+      const sliceW = w / scopeData.length;
+      for (let i = 0; i < scopeData.length; i++) {
+        const v = (scopeData[i] - 128) / 128;
+        const y = (h / 2) + v * (h * 0.44);
+        const x = i * sliceW;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+      }
+      ctx2d.stroke();
+    } else {
+      ctx2d.strokeStyle = 'rgba(0, 240, 255, 0.45)';
+      ctx2d.lineWidth = 1.5;
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, h / 2);
+      ctx2d.lineTo(w, h / 2);
+      ctx2d.stroke();
+    }
+
+    requestAnimationFrame(drawScope);
+  }
+  drawScope();
+}
+
+function captureModulePreset(mod) {
+  if (mod === 'uptempo') return getUptempoParams();
+  if (mod === 'bass') return getBassParams();
+  return getHardtekkParams();
+}
+
+function applyModulePreset(mod, params) {
+  if (!params || typeof params !== 'object') return;
+  if (mod === 'uptempo') {
+    if (params.mode && UPTEMPO_PRESETS[params.mode]) setUptempoMode(params.mode);
+    if (params.startHz !== undefined) setControlValue('up_start', 'num-up-start', params.startHz);
+    if (params.endHz !== undefined) setControlValue('up_end', 'num-up-end', params.endHz);
+    if (params.zaag !== undefined) setControlValue('up_zaag', 'num-up-zaag', params.zaag);
+    if (params.snapMs !== undefined) setControlValue('up_snap', 'num-up-snap', params.snapMs);
+    if (params.drive !== undefined) setControlValue('up_drive', 'num-up-drive', params.drive);
+    if (params.duration !== undefined) setControlValue('up_dauer', 'num-up-dauer', params.duration);
+    playUptempoKick();
+  } else if (mod === 'bass') {
+    if (params.mode && BASS_PRESETS[params.mode]) setBassMode(params.mode);
+    if (params.freq !== undefined) setControlValue('bass_freq', 'num-bass-freq', params.freq);
+    if (params.sub !== undefined) setControlValue('bass_sub', 'num-bass-sub', params.sub);
+    if (params.cutoff !== undefined) setControlValue('bass_cutoff', 'num-bass-cutoff', params.cutoff);
+    if (params.res !== undefined) setControlValue('bass_res', 'num-bass-res', params.res);
+    if (params.drive !== undefined) setControlValue('bass_drive', 'num-bass-drive', params.drive);
+    if (params.duration !== undefined) setControlValue('bass_dauer', 'num-bass-dauer', params.duration);
+    playBass();
+  } else {
+    if (params.mode && KICK_PRESETS[params.mode]) setKickMode(params.mode);
+    if (params.startHz !== undefined) setControlValue('start_hz', 'num-start', params.startHz);
+    if (params.endHz !== undefined) setControlValue('end_hz', 'num-end', params.endHz);
+    if (params.punch !== undefined) setControlValue('kick_punch', 'num-punch', params.punch);
+    if (params.tail !== undefined) setControlValue('kick_tail', 'num-tail', params.tail);
+    if (params.crunch !== undefined) setControlValue('kick_crunch', 'num-crunch', params.crunch);
+    if (params.drive !== undefined) setControlValue('drive', 'num-drive', params.drive);
+    if (params.duration !== undefined) setControlValue('dauer', 'num-dauer', params.duration);
+    playHardtekkKick();
+  }
+}
+
+const PRODUCER_PREFIXES = [
+  'DARK', 'ZAAG', 'KRAKEN', 'SUB', 'NEON', 'TOXIC', 'CYBER', 'ACID',
+  'RAVE', 'HYPER', 'HARD', 'DISTORT', 'SYNTH', 'RAW', 'NIGHT', 'CORE',
+  'SHADOW', 'VOLT', 'PSYCHO', 'OSTBLOCK'
+];
+
+const PRODUCER_SUFFIXES = [
+  'TEKK', 'KRAFT', 'LORD', 'DEMON', 'PULSE', 'VORTEX', 'BREAKER', 'REAPER',
+  'SYSTEM', 'BEATS', 'NOISE', 'SHOCK', 'X', '07', '230', '909', 'LAB', 'CORE'
+];
+
+function normalizeNameForSpeech(raw) {
+  const clean = String(raw || '').trim() || 'Sventekk';
+  // Wandelt ALL-CAPS (z.B. "KRAKEN TEKK") in normale Schreibweise um, damit HD-Stimmen nicht buchstabieren
+  return clean.replace(/\b[A-ZÄÖÜ]{3,}\b/g, (word) =>
+    word.charAt(0) + word.slice(1).toLowerCase()
+  );
+}
+
+function generateProducerName() {
+  const pre = PRODUCER_PREFIXES[Math.floor(Math.random() * PRODUCER_PREFIXES.length)];
+  let suf = PRODUCER_SUFFIXES[Math.floor(Math.random() * PRODUCER_SUFFIXES.length)];
+  if (pre === suf) suf = 'TEKK';
+  const joined = normalizeNameForSpeech(Math.random() > 0.45 ? `${pre}${suf}` : `${pre} ${suf}`);
+  const input = document.getElementById('tag-name-input');
+  if (input) input.value = joined;
+  syncProducerTagText();
+  setStatus(`PRODUCER NAME: ${joined.toUpperCase()}`);
+}
+
+function buildPhraseFromName() {
+  const name = normalizeNameForSpeech(document.getElementById('tag-name-input')?.value);
+  const phrase = document.getElementById('tag-phrase')?.value || 'achtung_de';
+  if (phrase === 'only') return name;
+  if (phrase === 'achtung_de') return `Achtung, das ist ${name}!`;
+  if (phrase === 'du_hoerst_de') return `Du hörst ${name} im Mix!`;
+  if (phrase === 'willkommen_de') return `Willkommen bei ${name} Audio!`;
+  if (phrase === 'in_the_mix') return `${name} in the mix!`;
+  if (phrase === 'welcome') return `Welcome to ${name} Hardtekk!`;
+  return `This is ${name}!`;
+}
+
+function syncProducerTagText() {
+  const fullEl = document.getElementById('tag-full-text');
+  if (fullEl) {
+    fullEl.value = buildPhraseFromName();
+  }
+}
+
+function getProducerTagText() {
+  const fullVal = (document.getElementById('tag-full-text')?.value || '').trim();
+  if (fullVal) return normalizeNameForSpeech(fullVal);
+  return buildPhraseFromName();
+}
+
+function getVoiceQualityScore(v) {
+  const name = String(v.name || '');
+  const lang = String(v.lang || '');
+  const isDe = /^de/i.test(lang);
+  const isEn = /^en/i.test(lang);
+  const isNatural = /natural|neural|online|wavenet|multilingual/i.test(name);
+  const isGoogle = /google/i.test(name);
+  const isEnhanced = /premium|enhanced|siri|markus|anna|daniel|samantha|florian|seraphina|conrad|killian|katja|guy|aria|andrew|brian/i.test(name);
+
+  let tier = 30;
+  if (isNatural) tier = 0;
+  else if (isGoogle) tier = 10;
+  else if (isEnhanced) tier = 20;
+
+  let langBias = 8;
+  if (isDe) langBias = 0;
+  else if (isEn) langBias = 2;
+
+  return tier + langBias;
+}
+
+function formatVoiceLabel(v) {
+  const raw = String(v.name || 'Voice');
+  const isHD = /natural|neural|online|google|premium|enhanced|multilingual/i.test(raw);
+  const cleanName = raw
+    .replace(/^Microsoft\s+/i, '')
+    .replace(/\s+Online\s*\(Natural\)/i, '')
+    .replace(/\s*-\s*German\s*\([^)]+\)/i, '')
+    .replace(/\s*-\s*English\s*\([^)]+\)/i, '')
+    .trim()
+    .slice(0, 24);
+  return `${isHD ? '★ HD · ' : ''}${cleanName} (${v.lang})`;
+}
+
+function initVoiceList() {
+  const sel = document.getElementById('tag-voice-select');
+  if (!sel || !('speechSynthesis' in window)) return;
+
+  const populate = () => {
+    const all = window.speechSynthesis.getVoices() || [];
+    if (!all.length) return;
+
+    // Bevorzugt hochwertige DE & EN Stimmen ganz oben
+    const filtered = all.filter(v => /^(de|en)/i.test(v.lang));
+    const pool = filtered.length ? filtered : all;
+
+    availableVoices = pool.slice().sort((a, b) => {
+      const diff = getVoiceQualityScore(a) - getVoiceQualityScore(b);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
+
+    const prevName = sel.dataset.selectedVoiceName || '';
+    sel.innerHTML = '';
+    availableVoices.forEach((v, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = formatVoiceLabel(v);
+      sel.appendChild(opt);
+    });
+
+    if (prevName) {
+      const matchIdx = availableVoices.findIndex(v => v.name === prevName);
+      if (matchIdx >= 0) sel.value = String(matchIdx);
+    } else {
+      sel.value = '0';
+    }
+  };
+
+  sel.addEventListener('change', () => {
+    const v = availableVoices[parseInt(sel.value, 10)];
+    if (v) sel.dataset.selectedVoiceName = v.name;
+  });
+
+  populate();
+  setTimeout(populate, 400);
+  setTimeout(populate, 1200);
+  window.speechSynthesis.onvoiceschanged = populate;
+}
+
+function triggerTagImpact() {
+  try {
+    const ctx = getAudioCtx();
+    const dest = getMasterOut();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(36, now + 0.2);
+    g.gain.setValueAtTime(0.24, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc.connect(g);
+    g.connect(dest);
+    osc.start(now);
+    osc.stop(now + 0.26);
+  } catch (e) {}
+}
+
+function stopSpeechKeepAlive() {
+  if (speechKeepAliveTimer) {
+    clearInterval(speechKeepAliveTimer);
+    speechKeepAliveTimer = null;
+  }
+  if (speechStartTimer) {
+    clearTimeout(speechStartTimer);
+    speechStartTimer = null;
+  }
+}
+
+function speakProducerTag() {
+  if (!('speechSynthesis' in window)) {
+    alert('Sprachausgabe wird von diesem Browser nicht unterstützt.');
+    return;
+  }
+
+  if (!availableVoices.length) {
+    initVoiceList();
+  }
+
+  const text = getProducerTagText();
+  const pitch = parseFloat(document.getElementById('tag_pitch')?.value || '1.0');
+  const rate = parseFloat(document.getElementById('tag_speed')?.value || '1.0');
+  const voiceIdx = parseInt(document.getElementById('tag-voice-select')?.value || '0', 10);
+  const statusEl = document.getElementById('tag-rec-status');
+
+  stopSpeechKeepAlive();
+
+  const needsCancel = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+  if (needsCancel) {
+    window.speechSynthesis.cancel();
+  }
+
+  triggerTagImpact();
+
+  const startDelay = needsCancel ? 120 : 60;
+  speechStartTimer = setTimeout(() => {
+    const utter = new SpeechSynthesisUtterance(text);
+    activeUtterance = utter; // Verhindert Chrome-GC-Abbruch mitten im Satz!
+
+    utter.volume = 1.0;
+    utter.pitch = Math.max(0.5, Math.min(1.6, pitch));
+    utter.rate = Math.max(0.6, Math.min(1.5, rate));
+
+    const chosen = availableVoices[voiceIdx];
+    if (chosen) {
+      utter.voice = chosen;
+      utter.lang = chosen.lang;
+    } else {
+      utter.lang = (typeof currentLang !== 'undefined' && currentLang === 'en') ? 'en-US' : 'de-DE';
+    }
+
+    utter.onstart = () => {
+      if (statusEl) {
+        statusEl.style.color = 'var(--cyan)';
+        statusEl.textContent = `🔊 "${text}"`;
+      }
+      // Chrome-Workaround: verhindert stummes Pausieren bei längeren Sätzen
+      speechKeepAliveTimer = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          stopSpeechKeepAlive();
+          return;
+        }
+        window.speechSynthesis.resume();
+      }, 3500);
+    };
+
+    utter.onend = () => {
+      stopSpeechKeepAlive();
+      activeUtterance = null;
+      setStatus('VOICE TAG FERTIG');
+    };
+
+    utter.onerror = (ev) => {
+      stopSpeechKeepAlive();
+      activeUtterance = null;
+      if (ev && ev.error !== 'interrupted' && ev.error !== 'canceled' && statusEl) {
+        statusEl.style.color = '#fca5a5';
+        statusEl.textContent = `Voice-Fehler (${ev.error}) – andere Stimme wählen.`;
+      }
+    };
+
+    window.speechSynthesis.resume();
+    window.speechSynthesis.speak(utter);
+    setStatus(`VOICE TAG: ${text.toUpperCase().slice(0, 32)}`);
+  }, startDelay);
+}
+
+async function recordVoiceTag() {
+  if (!requireLoginOnly()) return;
+  if (isRecordingTag) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+    alert('Mikrofon-Aufnahme wird von diesem Browser nicht unterstützt.');
+    return;
+  }
+
+  const recBtn = document.getElementById('btn-tag-rec');
+  const statusEl = document.getElementById('tag-rec-status');
+  isRecordingTag = true;
+  if (recBtn) {
+    recBtn.disabled = true;
+    recBtn.textContent = '● 3s...';
+  }
+  if (statusEl) {
+    statusEl.style.color = '#ff8c52';
+    statusEl.textContent = (typeof t === 'function') ? t('tag_rec_active') : 'Aufnahme läuft (3s) – sprich deinen Namen!';
+  }
+
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    const recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = (ev) => {
+      if (ev.data && ev.data.size > 0) chunks.push(ev.data);
+    };
+
+    const recordedBlob = await new Promise((resolve, reject) => {
+      recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
+      recorder.onerror = (ev) => reject(ev.error || new Error('Recording error'));
+      recorder.start();
+      setTimeout(() => {
+        if (recorder.state !== 'inactive') recorder.stop();
+      }, 3000);
+    });
+
+    const arrayBuf = await recordedBlob.arrayBuffer();
+    const ctx = await ensureAudioReady();
+    recordedTagBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+
+    if (statusEl) {
+      statusEl.style.color = '#6ee7b7';
+      statusEl.textContent = (typeof t === 'function') ? t('tag_rec_ready') : '✔ Aufnahme bereit – jetzt mit Rave-FX anhören oder als .WAV laden!';
+    }
+    const playBtn = document.getElementById('btn-tag-play-rec');
+    const dlBtn = document.getElementById('btn-tag-dl');
+    if (playBtn) playBtn.disabled = false;
+    if (dlBtn) dlBtn.disabled = false;
+    setStatus('VOICE TAG RECORDED');
+  } catch (err) {
+    if (statusEl) {
+      statusEl.style.color = '#fca5a5';
+      statusEl.textContent = 'Mic: ' + (err && err.message ? err.message : err);
+    }
+  } finally {
+    if (stream) {
+      stream.getTracks().forEach(tr => { try { tr.stop(); } catch (e) {} });
+    }
+    isRecordingTag = false;
+    if (recBtn) {
+      recBtn.disabled = false;
+      recBtn.textContent = (typeof t === 'function') ? t('tag_btn_rec') : '🎙 3s Aufnehmen';
+    }
+  }
+}
+
+function renderVoiceTagChain(ctx, dest, buffer, startTime) {
+  const pitchVal = parseFloat(document.getElementById('tag_pitch')?.value || '0.85');
+  const driveVal = parseFloat(document.getElementById('tag_drive')?.value || '6');
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.playbackRate.setValueAtTime(Math.max(0.55, Math.min(1.6, pitchVal)), startTime);
+
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.setValueAtTime(110, startTime);
+
+  const presence = ctx.createBiquadFilter();
+  presence.type = 'peaking';
+  presence.frequency.setValueAtTime(2400, startTime);
+  presence.gain.setValueAtTime(6.5, startTime);
+
+  const shaper = ctx.createWaveShaper();
+  shaper.curve = makeDistortionCurve(driveVal, driveVal > 12 ? 'gabber' : 'soft');
+  shaper.oversample = '2x';
+
+  const echo = createEchoChain(ctx, dest, 0.24);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(1.15, startTime);
+
+  src.connect(hp);
+  hp.connect(presence);
+  presence.connect(shaper);
+  shaper.connect(gain);
+  gain.connect(echo.input);
+
+  src.start(startTime);
+}
+
+async function playRecordedTag() {
+  if (!requireLoginOnly()) return;
+  if (!recordedTagBuffer) return;
+  const ctx = await ensureAudioReady();
+  renderVoiceTagChain(ctx, getMasterOut(), recordedTagBuffer, ctx.currentTime + 0.02);
+  setStatus('PLAYING VOICE TAG + FX');
+}
+
+function downloadVoiceTag() {
+  if (!recordedTagBuffer) {
+    alert((typeof t === 'function') ? t('tag_need_rec') : 'Bitte zuerst über "🎙 3s Aufnehmen" deine Stimme einsprechen.');
+    return;
+  }
+  const pitchVal = Math.max(0.55, Math.min(1.6, parseFloat(document.getElementById('tag_pitch')?.value || '0.85')));
+  const rawName = (document.getElementById('tag-name-input')?.value || 'TAG').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7) || 'TAG';
+  const dur = (recordedTagBuffer.duration / pitchVal) + 0.75;
+  renderAndDownload(dur, `TAG_${rawName}.wav`, (ctx, dest) => {
+    renderVoiceTagChain(ctx, dest, recordedTagBuffer, 0);
+  });
+}
+
 applyVersionTags();
 initAllControlBindings();
 buildMelodyNotes();
+updateMelodyDurationUI();
 renderSequencerUI();
 renderSampleLibrary();
 initFixNotesBox();
+initVoiceList();
+initOscilloscope();
 updateDownloadCounterUI();
+if (typeof initLanguage === 'function') initLanguage();
 loadSession();
