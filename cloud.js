@@ -542,12 +542,9 @@ setInterval(updateAccountUI, 1000);
 /* =========================================================================
    5. FEEDBACK & ADMIN-PANEL
    ========================================================================= */
-async function assignUserRole(targetUsername) {
+async function assignUserRole(targetUsername, newRole) {
   if (!canEditUserRoles(currentUser)) return;
-  const selectEl = document.getElementById(`role-sel-${targetUsername}`);
-  if (!selectEl) return;
-
-  const newRole = selectEl.value;
+  if (!newRole) return;
 
   try {
     const updated = await sbRpc('set_user_role', {
@@ -558,7 +555,7 @@ async function assignUserRole(targetUsername) {
       currentUser = updated;
       updateAccountUI();
     }
-    setStatus(`RANG VON ${targetUsername.toUpperCase()} -> ${newRole.toUpperCase()}`);
+    setStatus(`RANG VON ${String(targetUsername).toUpperCase()} -> ${newRole.toUpperCase()}`);
     await loadAdminData();
   } catch (e) {
     alert('Fehler beim Speichern des Rangs: ' + e.message);
@@ -583,28 +580,59 @@ async function loadAdminData() {
     tbodyUsers.innerHTML = users.length ? '' : '<tr><td colspan="5">Noch keine Nutzer.</td></tr>';
     users.forEach(u => {
       const r = getEffectiveRole(u);
-      const safeUser = escapeHtml(u.username);
       const tr = document.createElement('tr');
-      const dateStr = u.last_login ? escapeHtml(new Date(u.last_login).toLocaleString('de-DE')) : '-';
+      const dateStr = u.last_login ? new Date(u.last_login).toLocaleString('de-DE') : '-';
 
-      const roleControlHtml = allowRoleEdit
-        ? `<div style="display:flex; gap:6px; align-items:center;">
-             <select id="role-sel-${safeUser}" class="role-select">
-               <option value="free" ${r === 'free' ? 'selected' : ''}>free</option>
-               <option value="tester" ${r === 'tester' ? 'selected' : ''}>tester</option>
-               <option value="entwickler" ${r === 'entwickler' ? 'selected' : ''}>entwickler</option>
-             </select>
-             <button type="button" class="btn btn-cyan" style="padding:4px 9px; font-size:0.74rem; flex:0 0 auto;" onclick="assignUserRole('${safeUser}')">Speichern</button>
-           </div>`
-        : `<span style="color:var(--text-dim);">Nur Entwickler</span>`;
+      const tdUser = document.createElement('td');
+      const strongUser = document.createElement('strong');
+      strongUser.textContent = u.username || '-';
+      tdUser.appendChild(strongUser);
 
-      tr.innerHTML = `
-        <td><strong>${safeUser}</strong></td>
-        <td><span class="role-tag role-${r}">${escapeHtml(r.toUpperCase())}</span></td>
-        <td>${roleControlHtml}</td>
-        <td>${r !== 'free' ? '∞' : (Number(u.credits_used) || 0) + ' / ' + FREE_CREDITS_MAX}</td>
-        <td>${dateStr}</td>
-      `;
+      const tdRole = document.createElement('td');
+      const roleSpan = document.createElement('span');
+      roleSpan.className = `role-tag role-${r}`;
+      roleSpan.textContent = r.toUpperCase();
+      tdRole.appendChild(roleSpan);
+
+      const tdControl = document.createElement('td');
+      if (allowRoleEdit) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex; gap:6px; align-items:center;';
+
+        const select = document.createElement('select');
+        select.className = 'role-select';
+        ['free', 'tester', 'entwickler'].forEach(optVal => {
+          const opt = document.createElement('option');
+          opt.value = optVal;
+          opt.textContent = optVal;
+          if (r === optVal) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn btn-cyan';
+        saveBtn.style.cssText = 'padding:4px 9px; font-size:0.74rem; flex:0 0 auto;';
+        saveBtn.textContent = 'Speichern';
+        saveBtn.addEventListener('click', () => assignUserRole(u.username, select.value));
+
+        wrap.appendChild(select);
+        wrap.appendChild(saveBtn);
+        tdControl.appendChild(wrap);
+      } else {
+        const span = document.createElement('span');
+        span.style.color = 'var(--text-dim)';
+        span.textContent = 'Nur Entwickler';
+        tdControl.appendChild(span);
+      }
+
+      const tdCredits = document.createElement('td');
+      tdCredits.textContent = r !== 'free' ? '∞' : `${Number(u.credits_used) || 0} / ${FREE_CREDITS_MAX}`;
+
+      const tdDate = document.createElement('td');
+      tdDate.textContent = dateStr;
+
+      tr.append(tdUser, tdRole, tdControl, tdCredits, tdDate);
       tbodyUsers.appendChild(tr);
     });
   } catch (e) {

@@ -62,6 +62,10 @@
         <label>TESTER-CODE</label>
         <input type="password" id="role-code-input" maxlength="40" placeholder="Code eingeben...">
       </div>
+      <div class="security-note" style="border-color: rgba(88, 101, 242, 0.42); background: rgba(88, 101, 242, 0.1);">
+        Noch keinen Code? Melde dich auf unserem <strong>Discord</strong> an und bewirb dich in <code>#tester-anmeldung</code>:
+        <a href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer" style="color: #c7d2fe; font-weight: 700; text-decoration: underline; margin-left: 4px;">Discord öffnen &rarr;</a>
+      </div>
       <div id="role-modal-msg" class="auth-msg"></div>
       <div style="display: flex; gap: 8px;">
         <button type="button" class="btn btn-ghost" onclick="closeRoleModal()">Abbrechen</button>
@@ -76,10 +80,11 @@
       <div class="pill-badge" style="color: #ff8547; border-color: rgba(255, 85, 0, 0.4);">FREE LIMIT ERREICHT</div>
       <h2 style="font-size: 1.3rem; margin-bottom: 8px;">Keine Gratis-.WAV Downloads mehr übrig</h2>
       <p style="color: var(--text-dim); font-size: 0.88rem; margin-bottom: 14px;">
-        Deine Gratis-Exporte sind aufgebraucht. Folg mir auf Social Media und schreib mir direkt, wenn du Fragen hast oder mehr brauchst:
+        Deine 5 Gratis-Exporte sind aufgebraucht. Du willst <strong>Tester</strong> (unbegrenzte Downloads) oder <strong>Creator</strong> werden? Melde dich auf unserem Discord an und bewirb dich direkt dort:
       </p>
 
       <div class="social-row" style="justify-content: center; margin-bottom: 16px;">
+        <a class="nav-pill discord" href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer">Discord (Tester / Creator)</a>
         <a class="nav-pill primary" href="https://www.tiktok.com/@sventekk07" target="_blank" rel="noopener noreferrer">TikTok @sventekk07</a>
         <a class="nav-pill" href="https://www.instagram.com/sventekk07/" target="_blank" rel="noopener noreferrer">Instagram @sventekk07</a>
         <a class="nav-pill" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud</a>
@@ -115,6 +120,9 @@
           DEV .WAV EXPORTE: <span id="wav-download-count">0</span>
         </div>
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
+        <a href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer" class="btn btn-discord" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">
+          Discord
+        </a>
         <a href="korg-live.html" id="btn-view-korg" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">
           KORG LIVE
         </a>
@@ -160,6 +168,7 @@
             <span class="bpm-readout"><span id="header-bpm">180</span> BPM</span>
           </div>
           <div class="social-row">
+            <a class="nav-pill discord" href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer">Discord Server</a>
             <a class="nav-pill primary" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud</a>
             <a class="nav-pill secondary" href="https://www.tiktok.com/@sventekk07" target="_blank" rel="noopener noreferrer">TikTok @sventekk07</a>
             <a class="nav-pill secondary" href="https://www.instagram.com/sventekk07/" target="_blank" rel="noopener noreferrer">Insta @sventekk07</a>
@@ -188,6 +197,32 @@
           <div class="changelog-item cyan">
             <div class="changelog-item-title">Sequenzer- &amp; Melodie-Upgrade</div>
             <p>Komplette Melodie-Phrasen über 1–8 Takte, <strong>MONO / POLY</strong> Voice-Mode pro Spur und Multi-Takt Loop-.WAV-Export.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- DISCORD COMMUNITY & BEWERBUNG (TESTER / CREATOR) -->
+      <section class="discord-banner" aria-label="Discord Community und Bewerbung">
+        <div class="discord-banner-head">
+          <div>
+            <div class="pill-badge discord-pill">DISCORD COMMUNITY &middot; SVENTEKK-LAB</div>
+            <h2>Du willst Tester oder Creator werden?</h2>
+            <p class="discord-banner-sub">
+              Melde dich auf unserem <strong>SVENTEKK-Lab Discord</strong> an und bewirb dich direkt dort für deine Rolle – jede Bewerbung wird persönlich geprüft und freigeschaltet.
+            </p>
+          </div>
+          <a href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer" class="btn btn-discord discord-cta">
+            Auf Discord anmelden &amp; bewerben &rarr;
+          </a>
+        </div>
+        <div class="discord-roles-grid">
+          <div class="discord-role-card tester">
+            <div class="discord-role-title">Beta Tester werden</div>
+            <p>Unbegrenzte <strong>.WAV-Exporte</strong>, neue Synthesizer-Module &amp; Updates vorab testen. Auf Discord anmelden und direkt im Kanal <code>#tester-anmeldung</code> bewerben.</p>
+          </div>
+          <div class="discord-role-card creator">
+            <div class="discord-role-title">Creator werden</div>
+            <p>Eigene Hardtekk-/Uptempo-Kicks, Presets, Tracks oder Content rund um SVENTEKK teilen. Auf Discord anmelden und direkt im Kanal <code>#creator-anmeldung</code> bewerben.</p>
           </div>
         </div>
       </section>

@@ -16,6 +16,8 @@
   --orange-dim: rgba(255, 85, 0, 0.16);
   --purple: #a855f7;
   --purple-dim: rgba(168, 85, 247, 0.16);
+  --discord: #5865f2;
+  --discord-dim: rgba(88, 101, 242, 0.2);
   --radius-lg: 14px;
   --radius-md: 10px;
   --radius-sm: 8px;
@@ -291,6 +293,17 @@ h1 .accent {
   color: #ff9d6e;
 }
 
+.nav-pill.discord {
+  background: var(--discord-dim);
+  border-color: rgba(88, 101, 242, 0.55);
+  color: #c7d2fe;
+}
+
+.nav-pill.discord:hover {
+  border-color: #818cf8;
+  background: rgba(88, 101, 242, 0.32);
+}
+
 .changelog-bar {
   background: linear-gradient(135deg, rgba(19, 19, 27, 0.96) 0%, rgba(15, 15, 22, 0.96) 100%);
   border: 1px solid var(--border);
@@ -353,6 +366,94 @@ h1 .accent {
   font-size: 0.78rem;
   color: var(--text-dim);
   line-height: 1.4;
+}
+
+.discord-banner {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.16) 0%, rgba(19, 19, 27, 0.96) 55%, rgba(168, 85, 247, 0.12) 100%);
+  border: 1px solid rgba(88, 101, 242, 0.48);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 0 28px rgba(88, 101, 242, 0.12);
+}
+
+.discord-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.discord-pill {
+  color: #c7d2fe;
+  background: var(--discord-dim);
+  border-color: rgba(88, 101, 242, 0.5);
+  margin-bottom: 6px;
+}
+
+.discord-banner-head h2 {
+  font-size: 1.12rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.discord-banner-sub {
+  font-size: 0.83rem;
+  color: #d6dcf5;
+  max-width: 660px;
+}
+
+.discord-cta {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(88, 101, 242, 0.35);
+}
+
+.discord-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.discord-role-card {
+  background: rgba(11, 11, 16, 0.88);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--discord);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.discord-role-card.tester {
+  border-left-color: var(--cyan);
+}
+
+.discord-role-card.creator {
+  border-left-color: var(--purple);
+}
+
+.discord-role-title {
+  font-size: 0.86rem;
+  font-weight: 750;
+  margin-bottom: 3px;
+  color: var(--text);
+}
+
+.discord-role-card p {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.42;
+}
+
+.discord-role-card code {
+  color: #c7d2fe;
+  background: rgba(88, 101, 242, 0.16);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.75rem;
 }
 
 /* =========================================================================
@@ -667,6 +768,15 @@ textarea:focus {
 .btn-purple {
   background: var(--purple);
   color: #ffffff;
+}
+
+.btn-discord {
+  background: var(--discord);
+  color: #ffffff;
+}
+
+.btn-discord:hover {
+  background: #6774f6;
 }
 
 .btn-ghost {
@@ -1071,6 +1181,7 @@ footer {
 @media (max-width: 820px) {
   .hero-bar,
   .changelog-grid,
+  .discord-roles-grid,
   .modules-grid,
   .workflow-grid {
     grid-template-columns: 1fr;
