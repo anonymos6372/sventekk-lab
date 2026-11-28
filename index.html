@@ -36,9 +36,19 @@
         <input type="password" id="auth-password" maxlength="64" autocomplete="current-password" placeholder="••••••••">
       </div>
 
-      <div class="form-field" id="role-code-field" style="display: none;">
-        <label data-i18n="auth_label_code">TESTER-CODE (OPTIONAL)</label>
-        <input type="password" id="auth-rolecode" maxlength="32" placeholder="Leer lassen für Free-Account" data-i18n-placeholder="auth_ph_code">
+      <div id="register-rules-box" class="rules-box" style="display: none;">
+        <div class="rules-title" data-i18n="rules_title">📜 SVENTEKK Studio-Regelwerk</div>
+        <ul class="rules-list" data-i18n-html="rules_list_html">
+          <li><strong>Keine verfassungsfeindlichen, extremistischen oder strafbaren Benutzernamen &amp; Inhalte</strong> (führt zum sofortigen Ban).</li>
+          <li>Respektvoller Umgang im Live-Chat &amp; Feedback (kein Hass, keine Beleidigungen).</li>
+          <li>Kein Spam, keine Fremdwerbung und keine Fake-/Mehrfach-Accounts.</li>
+          <li>Kein Ausnutzen von Bugs oder Umgehen des 24h-Export-Limits.</li>
+          <li>Verstöße können zu Stummschaltung, Kick oder dauerhaftem Ban führen.</li>
+        </ul>
+        <label class="rules-check">
+          <input type="checkbox" id="auth-rules-check">
+          <span data-i18n="rules_accept">Ich habe das Regelwerk gelesen und akzeptiere es.</span>
+        </label>
       </div>
 
       <div class="security-note" data-i18n-html="auth_security_html">
@@ -165,6 +175,10 @@
       </div>
 
       <div class="user-info-group">
+        <div class="online-badge" id="ui-active-users-badge" title="Aktive Nutzer im Studio">
+          <span class="live-dot"></span>
+          <span id="ui-active-users">1</span> <span data-i18n="top_online">ONLINE</span>
+        </div>
         <div class="lang-switch" role="group" aria-label="Language">
           <button type="button" id="lang-btn-de" class="lang-btn active" onclick="setLanguage('de')">DE</button>
           <button type="button" id="lang-btn-en" class="lang-btn" onclick="setLanguage('en')">EN</button>
@@ -173,12 +187,6 @@
           <span data-i18n="top_dev_exports">DEV .WAV EXPORTE:</span> <span id="wav-download-count">0</span>
         </div>
         <div class="credit-badge" id="ui-credits-badge">0 / 5 FREE</div>
-        <a href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer" class="btn btn-discord" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">
-          Discord
-        </a>
-        <a href="korg-live.html" id="btn-view-korg" class="btn btn-purple" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">
-          KORG LIVE
-        </a>
         <button type="button" id="btn-role-code" class="btn btn-ghost" style="padding: 8px 12px; font-size: 0.8rem;" onclick="openRoleModal()" data-i18n="top_tester_code">
           Tester-Code
         </button>
@@ -194,16 +202,32 @@
     <!-- STUDIO HAUPTANSICHT -->
     <div id="studio-page-view">
 
+      <!-- STICKY NAVIGATION -->
+      <nav class="section-nav" aria-label="Seiten-Navigation">
+        <div class="section-nav-links">
+          <a class="nav-link" href="#sec-synth" data-i18n="nav_synth">Synth-Module</a>
+          <a class="nav-link" href="#sec-lab" data-i18n="nav_lab">Kick Lab</a>
+          <a class="nav-link" href="#sec-seq" data-i18n="nav_seq">Sequenzer</a>
+          <a class="nav-link" href="#sec-presets" data-i18n="nav_presets">Presets</a>
+          <a class="nav-link" href="#sec-feedback" data-i18n="nav_feedback">Feedback</a>
+        </div>
+        <div class="section-nav-actions">
+          <a href="korg-live.html" id="btn-view-korg" class="btn btn-purple" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">KORG LIVE</a>
+          <a href="https://discord.gg/jubxwavZa" target="_blank" rel="noopener noreferrer" class="btn btn-discord" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">Discord</a>
+        </div>
+      </nav>
+
       <!-- HERO HEADER -->
       <header class="hero-bar">
         <div>
           <div class="pill-badge">
             <span class="live-dot"></span> SVENTEKK AUDIO LAB
-            <span class="version-tag" id="header-version-badge">VERSION 0.4</span>
+            <span class="version-tag" id="header-version-badge">VERSION 0.5</span>
+            <span class="version-tag" style="color: var(--cyan);" data-i18n="hero_beginner_tag">FÜR ANFÄNGER</span>
           </div>
           <h1 data-i18n-html="hero_title_html">Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio</h1>
           <p class="hero-desc" data-i18n="hero_desc">
-            Synthesizer-Werkstatt für eigene Hardtekk- &amp; Uptempo-Kicks, Basslines, Snares/Claps/Rims, Hat-Rolls und komplette Rave-Melodien mit exakter Zahleneingabe.
+            Einsteigerfreundliche Synthesizer-Werkstatt speziell für Anfänger – bau dir eigene Hardtekk- &amp; Uptempo-Kicks, Basslines, Snares, Hat-Rolls und Rave-Melodien (mit ?-Erklärungen an jedem Regler).
           </p>
 
           <div class="studio-notice-box" data-i18n-html="hero_notice_html">
@@ -230,15 +254,14 @@
         </div>
       </header>
 
-      <!-- NEU IN VERSION 0.4 -->
-      <section class="changelog-bar" aria-label="Neu in Version 0.4">
-        <div class="changelog-head">
+      <!-- NEU IN VERSION 0.5 -->
+      <details class="changelog-bar">
+        <summary class="changelog-head fold-summary">
           <div class="changelog-title">
-            <span class="chip">UPDATE V 0.4</span>
-            <h2 data-i18n="cl_title">Neu in Version 0.4</h2>
+            <span class="chip">UPDATE V 0.5</span>
+            <h2 data-i18n="cl_title">Neu in Version 0.5</h2>
           </div>
-          <a href="korg-live.html" class="nav-pill primary" data-i18n="cl_korg_btn">Korg Live öffnen &rarr;</a>
-        </div>
+        </summary>
         <div class="changelog-grid">
           <div class="changelog-item purple">
             <div class="changelog-item-title" data-i18n="cl_1_title">DE / EN &amp; Live-Chat</div>
@@ -253,7 +276,7 @@
             <p data-i18n-html="cl_3_html">Neuer <strong>Producer Tag &amp; Voice</strong> Generator, Echtzeit-Wellenform, 2-Stufen-Uptempo &amp; Korg-Kurznamen.</p>
           </div>
         </div>
-      </section>
+      </details>
 
       <!-- DISCORD COMMUNITY & BEWERBUNG (TESTER / CREATOR) -->
       <section class="discord-banner" aria-label="Discord Community und Bewerbung">
@@ -269,6 +292,8 @@
             Auf Discord anmelden &amp; bewerben &rarr;
           </a>
         </div>
+        <details class="discord-more">
+          <summary class="fold-summary" data-i18n="dc_more">Was bringen Tester &amp; Creator?</summary>
         <div class="discord-roles-grid">
           <div class="discord-role-card tester">
             <div class="discord-role-title" data-i18n="dc_tester_title">Beta Tester werden</div>
@@ -279,16 +304,17 @@
             <p data-i18n-html="dc_creator_html">Eigene Hardtekk-/Uptempo-Kicks, Presets, Tracks oder Content rund um SVENTEKK teilen. Auf Discord anmelden und direkt im Kanal <code>#creator-anmeldung</code> bewerben.</p>
           </div>
         </div>
+        </details>
       </section>
 
       <!-- 01: SYNTH GENERATOREN -->
       <div class="section-head">
-        <h2 class="section-title"><span class="section-num">01</span> <span data-i18n="sec_01">Multi-Genre Sound-Synthese Module</span></h2>
+        <h2 class="section-title" id="sec-synth"><span class="section-num">01</span> <span data-i18n="sec_01">Multi-Genre Sound-Synthese Module</span></h2>
       </div>
 
       <div class="modules-grid">
         <!-- Modul 1: Hardtekk & Rave Kick -->
-        <div class="synth-card">
+        <div class="synth-card" data-help-mod="mod_kick">
           <div>
             <div class="card-top">
               <h3 data-i18n="m1_title">Hardtekk &amp; Rave Kick</h3>
@@ -364,7 +390,7 @@
         </div>
 
         <!-- Modul 2: Uptempo Piep / Zaag Kick -->
-        <div class="synth-card orange-theme">
+        <div class="synth-card orange-theme" data-help-mod="mod_uptempo">
           <div>
             <div class="card-top">
               <h3 data-i18n="m2_title">Uptempo Piep / Zaag Kick</h3>
@@ -430,7 +456,7 @@
         </div>
 
         <!-- Modul 3: Sub & Rave Bass -->
-        <div class="synth-card">
+        <div class="synth-card" data-help-mod="mod_bass">
           <div>
             <div class="card-top">
               <h3 data-i18n="m3_title">Sub &amp; Rave Bass</h3>
@@ -495,8 +521,115 @@
           </div>
         </div>
 
+        <!-- Modul 3B: Hardtekk Kick Lab (Distortion nur für Kicks) -->
+        <div class="synth-card lab-wide" id="sec-lab" data-help-mod="mod_lab" style="grid-column: span 3;">
+          <div>
+            <div class="card-top">
+              <h3 data-i18n="lab_title">Hardtekk Kick Lab (Distortion)</h3>
+              <span class="chip" id="lab-badge">TEKK PUNCH</span>
+            </div>
+            <p class="card-sub" data-i18n="lab_sub">Baue deinen eigenen Hardtekk-Kick: Basis wählen, dann in 3 Stufen verzerren und per EQ ausformen.</p>
+
+            <div class="lab-pill-label" data-i18n="lab_preset_label">PRESETS</div>
+            <div class="style-pills">
+              <button type="button" class="style-btn lab-style lab-preset-btn active" data-labpreset="tekk" onclick="setLabPreset('tekk')">Tekk Punch</button>
+              <button type="button" class="style-btn lab-style lab-preset-btn" data-labpreset="schranz" onclick="setLabPreset('schranz')">Schranz Rumble</button>
+              <button type="button" class="style-btn lab-style lab-preset-btn" data-labpreset="gabber" onclick="setLabPreset('gabber')">Gabber Crunch</button>
+              <button type="button" class="style-btn lab-style lab-preset-btn" data-labpreset="terror" onclick="setLabPreset('terror')">Terror Clip</button>
+            </div>
+
+            <div class="lab-pill-label" data-i18n="lab_base_label">BASIS-KICK</div>
+            <div class="style-pills">
+              <button type="button" class="style-btn lab-style lab-base-btn active" data-labbase="sine" onclick="setLabBase('sine')">909 Sinus</button>
+              <button type="button" class="style-btn lab-style lab-base-btn" data-labbase="triangle" onclick="setLabBase('triangle')">Gabber Dreieck</button>
+              <button type="button" class="style-btn lab-style lab-base-btn" data-labbase="click" onclick="setLabBase('click')">Click-Kick</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_start">Start-Frequenz (Klick)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-start" min="120" max="700" step="5" value="260"> Hz</span>
+                </label>
+                <input type="range" id="lab_start" min="120" max="700" step="5" value="260">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_end">End-Frequenz (Sub)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-end" min="32" max="80" step="1" value="48"> Hz</span>
+                </label>
+                <input type="range" id="lab_end" min="32" max="80" step="1" value="48">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="m1_len">Länge</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-dauer" min="0.2" max="0.9" step="0.01" value="0.42"> s</span>
+                </label>
+                <input type="range" id="lab_dauer" min="0.2" max="0.9" step="0.01" value="0.42">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_sat">Saturation (warm)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-sat" min="0" max="1" step="0.05" value="0.55"></span>
+                </label>
+                <input type="range" id="lab_sat" min="0" max="1" step="0.05" value="0.55">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_clip">Hard-Clip (Biss)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-clip" min="0" max="1" step="0.05" value="0.5"></span>
+                </label>
+                <input type="range" id="lab_clip" min="0" max="1" step="0.05" value="0.5">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_fold">Wavefold (Obertöne)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-fold" min="0" max="1" step="0.05" value="0.15"></span>
+                </label>
+                <input type="range" id="lab_fold" min="0" max="1" step="0.05" value="0.15">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_crush">Bitcrush (Rauheit)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-crush" min="0" max="1" step="0.05" value="0"></span>
+                </label>
+                <input type="range" id="lab_crush" min="0" max="1" step="0.05" value="0">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_sub">Sauberer Sub-Layer</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-sub" min="0" max="1" step="0.05" value="0.4"></span>
+                </label>
+                <input type="range" id="lab_sub" min="0" max="1" step="0.05" value="0.4">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_mid">Mitten-Cut (Hohlheit)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-mid" min="0" max="12" step="0.5" value="5"> dB</span>
+                </label>
+                <input type="range" id="lab_mid" min="0" max="12" step="0.5" value="5">
+              </div>
+              <div class="slider-item">
+                <label>
+                  <span data-i18n="lab_bite">Bite (Höhen-Punch)</span>
+                  <span class="num-unit"><input type="number" class="num-box" id="num-lab-bite" min="0" max="12" step="0.5" value="4"> dB</span>
+                </label>
+                <input type="range" id="lab_bite" min="0" max="12" step="0.5" value="4">
+              </div>
+            </div>
+
+            <div class="lab-pill-label" style="margin-top: 12px;" data-i18n="lab_preview_label">Kick-Wellenform (Vorschau, orange = hartes Clipping)</div>
+            <canvas id="lab-scope" class="lab-scope" width="900" height="96" aria-label="Kick Waveform Preview"></canvas>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-cyan" onclick="playLabKick()" data-i18n="btn_listen">Anhören</button>
+            <button type="button" class="btn btn-ghost" onclick="downloadLabKick()" data-i18n="btn_wav">.WAV Export</button>
+            <button type="button" id="btn-lab-seq" class="btn btn-ghost" onclick="toggleLabSeq()">Kick im Sequenzer: AUS</button>
+          </div>
+        </div>
+
         <!-- Modul 4: Snares, Claps & Hi-Hat Rolls -->
-        <div class="synth-card">
+        <div class="synth-card" data-help-mod="mod_snare">
           <div>
             <div class="card-top">
               <h3 data-i18n="m4_title">Snares, Claps &amp; Hat-Rolls</h3>
@@ -557,7 +690,7 @@
         </div>
 
         <!-- Modul 5: Melodie Generator -->
-        <div class="synth-card purple-theme">
+        <div class="synth-card purple-theme" data-help-mod="mod_melody">
           <div>
             <div class="card-top">
               <h3 data-i18n="m5_title">Melodie Generator</h3>
@@ -631,7 +764,7 @@
         </div>
 
         <!-- Modul 6: Producer Name & Voice-Tag Studio -->
-        <div class="synth-card orange-theme">
+        <div class="synth-card orange-theme" data-help-mod="mod_tag">
           <div>
             <div class="card-top">
               <h3 data-i18n="tag_title">Producer Name &amp; Voice-Tag</h3>
@@ -712,7 +845,7 @@
 
       <!-- 02: LIVE STEP SEQUENZER -->
       <div class="section-head">
-        <h2 class="section-title"><span class="section-num">02</span> <span data-i18n="sec_02">16-Step Live Groovebox &amp; Kompletter Loop-Export</span></h2>
+        <h2 class="section-title" id="sec-seq"><span class="section-num">02</span> <span data-i18n="sec_02">16-Step Live Groovebox &amp; Kompletter Loop-Export</span></h2>
       </div>
 
       <div class="panel-box">
@@ -751,7 +884,7 @@
 
       <!-- 03: CREATOR PRESET-WALL & SAMPLE LIBRARY -->
       <div class="section-head">
-        <h2 class="section-title"><span class="section-num">03</span> <span data-i18n="sec_03">Creator Preset-Wall &amp; Sample-Library</span></h2>
+        <h2 class="section-title" id="sec-presets"><span class="section-num">03</span> <span data-i18n="sec_03">Creator Preset-Wall &amp; Sample-Library</span></h2>
       </div>
 
       <div class="panel-box" style="margin-bottom: 14px;">
@@ -775,7 +908,8 @@
         <div id="creator-presets-list" class="sample-grid"></div>
       </div>
 
-      <div class="panel-box">
+      <details class="panel-box fold-panel">
+        <summary class="fold-summary"><span data-i18n="lib_fold">Sample-Library: eigene Clips vorhören</span></summary>
         <div class="library-header">
           <div>
             <h3 style="font-size: 1.1rem;" data-i18n="lib_title">Eigene Audio-Clips &amp; Kicks vorhören</h3>
@@ -787,12 +921,13 @@
           </label>
         </div>
         <div id="sample-library-list" class="sample-grid"></div>
-      </div>
+      </details>
 
       <!-- 04: WORKFLOW -->
-      <div class="section-head">
+      <details class="fold-section">
+      <summary class="section-head fold-summary">
         <h2 class="section-title"><span class="section-num">04</span> <span data-i18n="sec_04">Korg Electribe 2 &amp; FL Studio Workflow</span></h2>
-      </div>
+      </summary>
 
       <div class="workflow-grid">
         <div class="wf-step">
@@ -809,10 +944,12 @@
         </div>
       </div>
 
+      </details>
+
       <!-- 05: FEEDBACK & FIX-NOTIZBLOCK -->
       <div class="section-head">
-        <h2 class="section-title"><span class="section-num">05</span> <span data-i18n="sec_06">Feedback &amp; Offene Fixes</span></h2>
-        <span class="chip" id="feedback-version-chip">V 0.4</span>
+        <h2 class="section-title" id="sec-feedback"><span class="section-num">05</span> <span data-i18n="sec_06">Feedback &amp; Offene Fixes</span></h2>
+        <span class="chip" id="feedback-version-chip">V 0.5</span>
       </div>
 
       <div class="modules-grid">
@@ -880,6 +1017,20 @@
         </div>
 
         <div class="panel-box" style="overflow-x: auto; margin-bottom: 18px;">
+          <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+              <span class="admin-stat-label" data-i18n="admin_stat_total_label">REGISTRIERTE ACCOUNTS</span>
+              <strong class="admin-stat-val" id="admin-stat-total">-</strong>
+            </div>
+            <div class="admin-stat-card">
+              <span class="admin-stat-label" data-i18n="admin_stat_24h_label">HEUTE ANGEMELDET (24H)</span>
+              <strong class="admin-stat-val" id="admin-stat-24h">-</strong>
+            </div>
+            <div class="admin-stat-card">
+              <span class="admin-stat-label" data-i18n="admin_stat_team_label">TESTER / CREATOR / DEV</span>
+              <strong class="admin-stat-val" id="admin-stat-team">-</strong>
+            </div>
+          </div>
           <h3 style="font-size: 0.98rem; margin-bottom: 6px;" data-i18n-html="admin_users_title_html">Registrierte Accounts, Ränge &amp; Moderation (<code>studio_profiles</code>)</h3>
           <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;" data-i18n-html="admin_users_sub_html">
             Als <strong>Entwickler</strong> kannst du Ränge (<code>free</code>, <code>tester</code>, <code>creator</code>, <code>entwickler</code>) vergeben sowie Nutzer stummen, kicken oder bannen.
@@ -921,12 +1072,14 @@
       </div>
 
       <footer>
-        SVENTEKK Audio Lab &middot; <strong id="footer-version-text">Version 0.4</strong> &middot; <span data-i18n="footer_suffix">Modular Web Audio Synthesizer (Keine KI-Songs)</span>
+        SVENTEKK Audio Lab &middot; <strong id="footer-version-text">Version 0.5</strong> &middot; <span data-i18n="footer_suffix">Modular Web Audio Synthesizer (Keine KI-Songs)</span>
       </footer>
 
     </div>
 
   </div>
+
+  <div class="studio-watermark" aria-hidden="true">SVENTEKK</div>
 
   <!-- SKRIPTE IN KLARER REIHENFOLGE -->
   <script src="cloud.js"></script>

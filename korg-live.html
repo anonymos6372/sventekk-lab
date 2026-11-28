@@ -259,6 +259,30 @@
     .hud-top { top: 12px; }
     .hud-bottom { bottom: 10px; }
 
+    body.hud-hidden {
+      cursor: none;
+    }
+
+    #korg-watermark {
+      position: fixed;
+      left: 18px;
+      bottom: 64px;
+      z-index: 4;
+      pointer-events: none;
+      user-select: none;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 900;
+      letter-spacing: 0.24em;
+      color: rgba(255, 255, 255, 0.22);
+      text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+      transition: bottom 0.2s ease;
+    }
+
+    body.hud-hidden #korg-watermark {
+      bottom: 14px;
+    }
+
     body.hud-hidden .hud {
       opacity: 0;
       pointer-events: none;
@@ -461,6 +485,68 @@
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
     a.back-btn:hover { border-color: rgba(255, 255, 255, 0.36); }
+
+    .korg-help-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .korg-help-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(20, 22, 34, 0.9);
+      color: var(--muted);
+      font-size: 0.62rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .korg-help-btn:hover,
+    .korg-help-btn.active {
+      border-color: var(--accent);
+      color: #ffffff;
+      background: color-mix(in srgb, var(--accent) 26%, #141622);
+    }
+
+    .korg-help-bar {
+      display: none;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: rgba(16, 18, 28, 0.96);
+      border: 1px solid color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.16));
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.72rem;
+      color: #e6e8f4;
+      line-height: 1.35;
+    }
+
+    .korg-help-bar.open {
+      display: flex;
+    }
+
+    .korg-help-close {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--muted);
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      line-height: 1.2;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
   </style>
 </head>
 <body>
@@ -476,6 +562,7 @@
       <div id="sub-tag">KORG ELECTRIBE 2 // LIVE</div>
       <div id="pad-callout">PAD 01 · LINES + SHAKE</div>
     </div>
+    <div id="korg-watermark" aria-hidden="true">SVENTEKK</div>
   </div>
 
   <!-- 16-Pad Streifen -->
@@ -485,6 +572,7 @@
   <div class="hud hud-top">
     <div class="group">
       <a href="index.html" class="back-btn">← Studio</a>
+      <span class="status-pill" style="color:#c7d2fe; border-color:rgba(168,85,247,0.45);">V 0.5</span>
       <button id="btn-midi" class="primary">KORG CONNECT</button>
       <select id="select-padmap" title="Wie Korg-Pads erkannt werden">
         <option value="auto">PAD-MAP: AUTO</option>
@@ -506,6 +594,10 @@
 
   <!-- Bottom Bar -->
   <div class="hud hud-bottom">
+    <div id="korg-help-bar" class="korg-help-bar" role="status">
+      <span id="korg-help-text"></span>
+      <button type="button" class="korg-help-close" id="btn-korg-help-close" aria-label="Hilfe schließen">&times;</button>
+    </div>
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="wave">WAVE</button>
       <button class="tab-btn" data-tab="color">COLOR & BG</button>
@@ -630,6 +722,9 @@
       <label>NAME:
         <input type="text" id="input-name" value="SVENTEKK" maxlength="20" style="width:95px;" />
       </label>
+      <label>SUB:
+        <input type="text" id="input-sub" value="KORG ELECTRIBE 2 // LIVE" maxlength="36" style="width:145px;" />
+      </label>
       <label>FONT:
         <select id="select-font">
           <option value="'Orbitron', sans-serif">ORBITRON</option>
@@ -650,8 +745,20 @@
     <!-- Tab 4: FX & Presets -->
     <div class="tab-panel" id="panel-fx">
       <button id="btn-audio">AUDIO IN</button>
+      <label>GAIN:
+        <input type="range" id="range-audiogain" min="0.3" max="3.0" step="0.1" value="1.0" />
+        <span class="val" id="val-audiogain">1.0</span>
+      </label>
       <button id="btn-strobe">STROBE: AUS</button>
       <button id="btn-shake-master" class="active-toggle">SHAKE MASTER: AN</button>
+      <button id="btn-wakelock" title="Bildschirm wach halten">WAKE LOCK: AUS</button>
+      <select id="select-theme">
+        <option value="">THEME...</option>
+        <option value="hardtekk">HARDTEKK RED</option>
+        <option value="cyber">CYBER TEAL</option>
+        <option value="toxic">UPTEMPO TOXIC</option>
+        <option value="purple">DARK PURPLE</option>
+      </select>
       <select id="select-preset">
         <option value="">PRESET...</option>
         <option value="slot1">SLOT 1</option>
@@ -680,6 +787,7 @@
     const bpmDisplay = document.getElementById('bpm-display');
 
     const inputName = document.getElementById('input-name');
+    const inputSub = document.getElementById('input-sub');
     const selectFont = document.getElementById('select-font');
     const selectShape = document.getElementById('select-shape');
     const selectColorMode = document.getElementById('select-colormode');
@@ -696,6 +804,7 @@
     const rangeBgGlow = document.getElementById('range-bgglow');
     const rangeTrail = document.getElementById('range-trail');
     const rangeBaseY = document.getElementById('range-basey');
+    const rangeAudioGain = document.getElementById('range-audiogain');
 
     const valCount = document.getElementById('val-count');
     const valHeight = document.getElementById('val-height');
@@ -707,6 +816,7 @@
     const valBgGlow = document.getElementById('val-bgglow');
     const valTrail = document.getElementById('val-trail');
     const valBaseY = document.getElementById('val-basey');
+    const valAudioGain = document.getElementById('val-audiogain');
 
     const inputColor = document.getElementById('input-color');
     const inputColor2 = document.getElementById('input-color2');
@@ -752,6 +862,7 @@
     let waveSpeed = parseFloat(rangeSpeed.value);
     let trailAlpha = parseFloat(rangeTrail.value);
     let baseLineRatio = parseFloat(rangeBaseY.value);
+    let audioGain = parseFloat(rangeAudioGain.value);
     let waveShape = selectShape.value;
 
     let mirrorEnabled = true;
@@ -1163,6 +1274,7 @@
         speed: waveSpeed,
         trail: trailAlpha,
         baseY: baseLineRatio,
+        audioGain,
         mirrorEnabled,
         calloutEnabled,
         bgColor,
@@ -1183,7 +1295,9 @@
       if (!cfg) return;
       inputName.value = cfg.name ?? 'SVENTEKK';
       artistTitle.textContent = inputName.value || ' ';
-      subTag.textContent = cfg.sub ?? 'KORG ELECTRIBE 2 // LIVE';
+      const subVal = cfg.sub ?? 'KORG ELECTRIBE 2 // LIVE';
+      if (inputSub) inputSub.value = subVal;
+      subTag.textContent = subVal;
       selectFont.value = cfg.font ?? "'Orbitron', sans-serif";
       artistTitle.style.fontFamily = selectFont.value;
       selectShape.value = cfg.shape ?? 'upward-lines';
@@ -1231,6 +1345,10 @@
       baseLineRatio = cfg.baseY ?? 1.0;
       rangeBaseY.value = baseLineRatio;
       valBaseY.textContent = baseLineRatio.toFixed(2);
+
+      audioGain = cfg.audioGain ?? 1.0;
+      rangeAudioGain.value = audioGain;
+      valAudioGain.textContent = audioGain.toFixed(1);
 
       mirrorEnabled = cfg.mirrorEnabled !== undefined ? !!cfg.mirrorEnabled : true;
       btnMirror.textContent = `MIRROR: ${mirrorEnabled ? 'AN' : 'AUS'}`;
@@ -1283,6 +1401,90 @@
         padIndicator.textContent = `LOADED ${selectPreset.value.toUpperCase()}`;
       }
     });
+
+    if (inputSub) {
+      inputSub.addEventListener('input', () => {
+        subTag.textContent = inputSub.value || 'KORG ELECTRIBE 2 // LIVE';
+      });
+    }
+
+    rangeAudioGain.addEventListener('input', () => {
+      audioGain = parseFloat(rangeAudioGain.value);
+      valAudioGain.textContent = audioGain.toFixed(1);
+    });
+
+    const QUICK_THEMES = {
+      hardtekk: { shape: 'upward-lines', colorMode: 'single', bgMode: 'pulse', color: '#ff1e42', color2: '#00f5d4', bgColor: '#07070b', bgColor2: '#1c0714', strobeEnabled: false },
+      cyber:    { shape: 'harmonic', colorMode: 'duo', bgMode: 'neon', color: '#00f5d4', color2: '#a855f7', bgColor: '#050811', bgColor2: '#0b1829', strobeEnabled: false },
+      toxic:    { shape: 'zaag', colorMode: 'pad-mix', bgMode: 'gradient', color: '#39ff14', color2: '#facc15', bgColor: '#060c07', bgColor2: '#11220c', strobeEnabled: false },
+      purple:   { shape: 'pulse-arc', colorMode: 'spectrum', bgMode: 'pulse', color: '#a855f7', color2: '#ff2a85', bgColor: '#090612', bgColor2: '#22092e', strobeEnabled: false }
+    };
+
+    const selectTheme = document.getElementById('select-theme');
+    if (selectTheme) {
+      selectTheme.addEventListener('change', () => {
+        const th = QUICK_THEMES[selectTheme.value];
+        if (!th) return;
+        applyConfig({ ...getCurrentConfig(), ...th });
+        padIndicator.textContent = `THEME ${selectTheme.value.toUpperCase()}`;
+        saveAutoConfig();
+        selectTheme.value = '';
+      });
+    }
+
+    let wakeLockSentinel = null;
+    const btnWakeLock = document.getElementById('btn-wakelock');
+    async function toggleWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        alert('Wake Lock wird von diesem Browser nicht unterstützt.');
+        return;
+      }
+      if (wakeLockSentinel) {
+        try { await wakeLockSentinel.release(); } catch (e) {}
+        wakeLockSentinel = null;
+        if (btnWakeLock) {
+          btnWakeLock.textContent = 'WAKE LOCK: AUS';
+          btnWakeLock.classList.remove('active-toggle');
+        }
+        return;
+      }
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+          if (btnWakeLock) {
+            btnWakeLock.textContent = 'WAKE LOCK: AUS';
+            btnWakeLock.classList.remove('active-toggle');
+          }
+        });
+        if (btnWakeLock) {
+          btnWakeLock.textContent = 'WAKE LOCK: AN';
+          btnWakeLock.classList.add('active-toggle');
+        }
+      } catch (e) {
+        alert('Wake Lock nicht aktivierbar: ' + e.message);
+      }
+    }
+    if (btnWakeLock) btnWakeLock.addEventListener('click', toggleWakeLock);
+
+    let autoSaveTimer = null;
+    function saveAutoConfig() {
+      try {
+        localStorage.setItem('sventekk_korg_live_autosave', JSON.stringify(getCurrentConfig()));
+      } catch (e) {}
+    }
+    document.querySelector('.hud-bottom')?.addEventListener('input', () => {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(saveAutoConfig, 250);
+    });
+    document.querySelector('.hud-bottom')?.addEventListener('change', saveAutoConfig);
+    document.querySelector('.hud-bottom')?.addEventListener('click', (e) => {
+      if (e.target && e.target.tagName === 'BUTTON') setTimeout(saveAutoConfig, 50);
+    });
+    try {
+      const savedAuto = localStorage.getItem('sventekk_korg_live_autosave');
+      if (savedAuto) applyConfig(JSON.parse(savedAuto));
+    } catch (e) {}
 
     function triggerPad(padIndex, velocity = 115, note = 36) {
       const idx = ((padIndex % NUM_PADS) + NUM_PADS) % NUM_PADS;
@@ -1581,13 +1783,13 @@
       if (analyser && audioData) {
         analyser.getByteFrequencyData(audioData);
         for (let i = 0; i < NUM_PADS; i++) {
-          const val = (audioData[i] || 0) / 255;
-          if (val > 0.35) {
+          const val = Math.min(1.5, ((audioData[i] || 0) / 255) * audioGain);
+          if (val > 0.30) {
             if (pads[i].linesOn) {
               pads[i].energy = Math.max(pads[i].energy, val * 1.15);
             }
             if (pads[i].shakeOn && shakeMasterEnabled && val > 0.72) {
-              shakeImpulse = Math.max(shakeImpulse, val * 0.85);
+              shakeImpulse = Math.max(shakeImpulse, Math.min(1.2, val * 0.85));
             }
           }
         }
@@ -1856,6 +2058,158 @@
       requestAnimationFrame(render);
     }
 
+    const KORG_HELP_TEXTS = {
+      de: {
+        'btn-midi': 'KORG CONNECT: Verbindet deine Korg Electribe 2 per Web MIDI mit dem Visualizer.',
+        'select-padmap': 'PAD-MAP: Legt fest, ob Pads über MIDI-Kanal (1–16), Noten-Tonhöhe oder automatisch erkannt werden.',
+        'btn-test-pad': 'TEST: Löst einen zufälligen Pad-Treffer aus (auch über Tasten 1–9 und Q–U spielbar).',
+        'btn-fullscreen': 'FULLSCREEN: Schaltet den Visualizer in den Vollbildmodus.',
+        'btn-hide-hud': 'HUD [H]: Blendet alle Menüs und den Mauszeiger für Live-Shows aus (Taste H zum Ein-/Ausblenden).',
+
+        'select-shape': 'MODUL: Wählt die Wellenform / Grafik-Darstellung (Linien, Ribbon, Dual Sine, Matrix Bars, Zaag).',
+        'range-count': 'ANZAHL: Wie viele parallele Wellen/Linien gleichzeitig gezeichnet werden (1–16).',
+        'range-height': 'HÖHE: Verstärkt den Ausschlag der Wellen bei jedem Pad-Treffer.',
+        'range-freq': 'FREQ: Wie eng oder weit die Schwingungen der Wellen gezeichnet werden.',
+        'range-width': 'DICKE: Strichstärke der gezeichneten Linien.',
+        'range-spread': 'SPREAD: Abstand zwischen den einzelnen Linien bzw. Ebenen.',
+        'range-speed': 'SPEED: Bewegungsgeschwindigkeit der Wellen-Animation.',
+        'btn-mirror': 'MIRROR: Spiegelt die Wellen zusätzlich nach unten/oben.',
+
+        'select-colormode': 'WAVE-FARBE: Single (Farbe 1), 16-Pad Mix (pro Pad eigene Neon-Farbe), Duo (Farbe 1+2) oder Spectrum.',
+        'input-color': 'FARBE 1: Hauptfarbe für Wellen, Logo-Glow und Akzente.',
+        'input-color2': 'FARBE 2: Zweite Farbe für Duo-Modus.',
+        'select-bgmode': 'BG-MODUS: Normal, Farbverlauf, Neon Glow oder Kick-Pulse (Hintergrund blitzt im Takt).',
+        'input-bg': 'BG 1: Primäre Hintergrundfarbe.',
+        'input-bg2': 'BG 2: Zweite Hintergrundfarbe für Verlauf & Glow.',
+        'range-bgangle': 'WINKEL: Richtung des Hintergrund-Farbverlaufs in Grad.',
+        'range-bgglow': 'BG-GLOW: Stärke des Hintergrund-Leuchtens.',
+        'range-trail': 'TRAIL: Nachleucht-Dauer der Wellen (kleiner = längere Schweife, größer = kürzer).',
+        'range-basey': 'BASIS Y: Vertikale Position der Bodenlinie (z. B. für Upward Lines).',
+
+        'input-name': 'NAME: Dein Artist-/DJ-Name groß in der Mitte.',
+        'input-sub': 'SUB: Untertitel direkt unter deinem Namen.',
+        'select-font': 'FONT: Schriftart für dein zentrales Logo.',
+        'pad-routing-list': 'PAD-ROUTING (1–16): L = Pad bewegt Linien, S = Pad löst Screen-Shake aus, R = Zufällige Position.',
+        'btn-preset-kickshake': 'PAD 1 SHAKE: Setzt Shake nur auf Pad 1 (Kick) und Linien auf alle 16 Pads.',
+        'btn-all-rand': 'RND POS: Schaltet zufällige Positionen für alle Pads ein oder aus.',
+        'btn-callout-toggle': 'PAD-POPUP: Zeigt beim Anschlag kurz an, welches Pad getriggert wurde.',
+        'btn-pads-toggle': '16-PADS: Blendet die 16 Pad-Tasten über der Leiste ein oder aus.',
+
+        'btn-audio': 'AUDIO IN: Aktiviert/deaktiviert Mikrofon oder Korg Line-In, damit der Visualizer auf Musik reagiert.',
+        'range-audiogain': 'GAIN: Empfindlichkeit für AUDIO IN (hochdrehen bei leisem Line-In, runter bei Übersteuerung).',
+        'btn-strobe': 'STROBE: Kurzer Stroboskop-Blitz bei starken Kick-Treffern.',
+        'btn-shake-master': 'SHAKE MASTER: Erlaubt oder blockiert Bildschirm-Wackeln global.',
+        'btn-wakelock': 'WAKE LOCK: Verhindert, dass der Bildschirm während eines Live-Sets ausgeht.',
+        'select-theme': 'THEME: Lädt mit 1 Klick fertige Farb- und Wellen-Styles.',
+        'select-preset': 'PRESET: Lädt deine gespeicherten Settings aus Slot 1, 2 oder 3.',
+        'btn-save-preset': 'SAVE: Speichert alle aktuellen Einstellungen in den gewählten Slot.'
+      },
+      en: {
+        'btn-midi': 'KORG CONNECT: Connects your Korg Electribe 2 via Web MIDI to the visualizer.',
+        'select-padmap': 'PAD-MAP: Chooses whether pads are mapped by MIDI channel (1–16), note pitch or auto.',
+        'btn-test-pad': 'TEST: Triggers a random pad hit (also playable with keys 1–9 and Q–U).',
+        'btn-fullscreen': 'FULLSCREEN: Switches the visualizer into fullscreen mode.',
+        'btn-hide-hud': 'HUD [H]: Hides all menus and the mouse cursor for live shows (press H to toggle).',
+
+        'select-shape': 'MODULE: Selects the wave / graphic style (Lines, Ribbon, Dual Sine, Matrix Bars, Zaag).',
+        'range-count': 'COUNT: Number of parallel waves/lines drawn at once (1–16).',
+        'range-height': 'HEIGHT: Boosts the wave amplitude on each pad hit.',
+        'range-freq': 'FREQ: Controls how tight or wide the wave oscillations appear.',
+        'range-width': 'WIDTH: Stroke thickness of the drawn lines.',
+        'range-spread': 'SPREAD: Spacing between individual lines or layers.',
+        'range-speed': 'SPEED: Animation speed of the moving waves.',
+        'btn-mirror': 'MIRROR: Mirrors the waves vertically.',
+
+        'select-colormode': 'WAVE COLOR: Single (Color 1), 16-Pad Mix (neon per pad), Duo (1+2) or Spectrum.',
+        'input-color': 'COLOR 1: Main color for waves, logo glow and accents.',
+        'input-color2': 'COLOR 2: Secondary color for Duo mode.',
+        'select-bgmode': 'BG MODE: Solid, Gradient, Neon Glow or Kick Pulse (reacts to kicks).',
+        'input-bg': 'BG 1: Primary background color.',
+        'input-bg2': 'BG 2: Secondary background color for gradients & glow.',
+        'range-bgangle': 'ANGLE: Direction of the background gradient in degrees.',
+        'range-bgglow': 'BG GLOW: Intensity of the background glow.',
+        'range-trail': 'TRAIL: Persistence/afterglow of the waves (lower = longer trails).',
+        'range-basey': 'BASE Y: Vertical baseline position (e.g. for Upward Lines).',
+
+        'input-name': 'NAME: Your artist/DJ name displayed in the center.',
+        'input-sub': 'SUB: Subtitle directly underneath your name.',
+        'select-font': 'FONT: Font family for the center title.',
+        'pad-routing-list': 'PAD ROUTING (1–16): L = Move lines, S = Trigger screen shake, R = Random position.',
+        'btn-preset-kickshake': 'PAD 1 SHAKE: Sets shake only on Pad 1 (Kick) and lines on all 16 pads.',
+        'btn-all-rand': 'RND POS: Toggles random positions for all pads.',
+        'btn-callout-toggle': 'PAD POPUP: Briefly displays which pad was triggered.',
+        'btn-pads-toggle': '16-PADS: Shows or hides the 16 pad buttons above the bar.',
+
+        'btn-audio': 'AUDIO IN: Enables/disables mic or Korg line-in so visuals react to audio.',
+        'range-audiogain': 'GAIN: Sensitivity for AUDIO IN (turn up for quiet line-in, down if clipping).',
+        'btn-strobe': 'STROBE: Flash effect on heavy kick hits.',
+        'btn-shake-master': 'SHAKE MASTER: Globally enables or disables screen shake.',
+        'btn-wakelock': 'WAKE LOCK: Keeps your screen from turning off during a live set.',
+        'select-theme': 'THEME: Loads ready-to-use color & wave themes in 1 click.',
+        'select-preset': 'PRESET: Loads your saved settings from Slot 1, 2 or 3.',
+        'btn-save-preset': 'SAVE: Saves all current settings into the selected slot.'
+      }
+    };
+
+    function initKorgHelp() {
+      const helpBar = document.getElementById('korg-help-bar');
+      const helpText = document.getElementById('korg-help-text');
+      const helpClose = document.getElementById('btn-korg-help-close');
+      if (!helpBar || !helpText) return;
+
+      let lang = 'de';
+      try {
+        if (localStorage.getItem('sventekk_lang_v1') === 'en') lang = 'en';
+      } catch (e) {}
+      const dict = KORG_HELP_TEXTS[lang] || KORG_HELP_TEXTS.de;
+      let activeKey = null;
+
+      function closeHelp() {
+        activeKey = null;
+        helpBar.classList.remove('open');
+        document.querySelectorAll('.korg-help-btn.active').forEach((b) => b.classList.remove('active'));
+      }
+
+      if (helpClose) helpClose.addEventListener('click', closeHelp);
+
+      Object.keys(dict).forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'korg-help-btn';
+        btn.textContent = '?';
+        btn.setAttribute('aria-label', 'Info');
+
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (activeKey === id && helpBar.classList.contains('open')) {
+            closeHelp();
+            return;
+          }
+          closeHelp();
+          activeKey = id;
+          helpText.textContent = dict[id];
+          helpBar.classList.add('open');
+          btn.classList.add('active');
+        });
+
+        const labelHost = el.closest('label');
+        if (labelHost) {
+          labelHost.appendChild(btn);
+        } else {
+          const wrap = document.createElement('span');
+          wrap.className = 'korg-help-wrap';
+          el.parentNode.insertBefore(wrap, el);
+          wrap.appendChild(el);
+          wrap.appendChild(btn);
+        }
+      });
+    }
+
+    initKorgHelp();
     render();
   </script>
 </body>

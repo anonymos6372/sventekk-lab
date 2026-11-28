@@ -1,7 +1,7 @@
 /* =========================================================================
    1. KONSTANTEN, SPRACHE (DE / EN) & STATUSVARIABLEN
    ========================================================================= */
-const APP_VERSION = '0.4';
+const APP_VERSION = '0.5';
 
 const SUPABASE_URL = 'https://zrdturntjcdvazyrrskk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZHR1cm50amNkdmF6eXJyc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0Njc2NTEsImV4cCI6MjExMTA0MzY1MX0.-mhnNpMM096PZeo-Xxf0zrjycnCyP0V9sKLjMExIofI';
@@ -23,6 +23,84 @@ let chatMessages = [];
 let creatorPresets = [];
 let chatPollTimer = null;
 let chatPollTicks = 0;
+let presenceTimer = null;
+
+function getPresenceSessionId() {
+  const key = 'sventekk_presence_sid_v1';
+  try {
+    let sid = sessionStorage.getItem(key);
+    if (!sid || sid.length < 8) {
+      sid = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : ('sid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12));
+      sessionStorage.setItem(key, sid);
+    }
+    return sid;
+  } catch (e) {
+    return 'sid-' + Math.random().toString(36).slice(2, 14);
+  }
+}
+
+async function pingStudioPresence() {
+  const countEl = document.getElementById('ui-active-users');
+  if (!countEl) return;
+  try {
+    let token = null;
+    try { token = await getValidAccessToken(); } catch (e) {}
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/ping_studio_presence`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_session_id: getPresenceSessionId() })
+    });
+    if (!res.ok) {
+      console.warn('Presence RPC error:', res.status, await res.text());
+      return;
+    }
+    const data = await res.json();
+    if (data && typeof data.active_users === 'number') {
+      countEl.textContent = String(data.active_users);
+    }
+  } catch (e) {
+    console.warn('Presence fetch failed:', e);
+  }
+}
+
+function leaveStudioPresence() {
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/leave_studio_presence`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_session_id: getPresenceSessionId() })
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function startPresenceHeartbeat() {
+  if (presenceTimer) clearInterval(presenceTimer);
+  pingStudioPresence();
+  presenceTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      pingStudioPresence();
+    }
+  }, 15000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    pingStudioPresence();
+  }
+});
+window.addEventListener('pagehide', leaveStudioPresence);
+setTimeout(() => { startPresenceHeartbeat(); }, 300);
 
 /* =========================================================================
    2. ÜBERSETZUNGEN (DEUTSCH / ENGLISH)
@@ -41,6 +119,10 @@ const I18N = {
     auth_label_code: 'TESTER-CODE (OPTIONAL)',
     auth_ph_code: 'Leer lassen für Free-Account',
     auth_security_html: '🔒 <strong>Sicherer Cloud-Login:</strong> Verschlüsselte Session &amp; Passwortschutz über Supabase Auth.',
+    rules_title: '📜 SVENTEKK Studio-Regelwerk',
+    rules_list_html: '<li><strong>Keine verfassungsfeindlichen, extremistischen oder strafbaren Benutzernamen &amp; Inhalte</strong> (führt zum sofortigen Ban).</li><li>Respektvoller Umgang im Live-Chat &amp; Feedback (kein Hass, keine Beleidigungen).</li><li>Kein Spam, keine Fremdwerbung und keine Fake-/Mehrfach-Accounts.</li><li>Kein Ausnutzen von Bugs oder Umgehen des 24h-Export-Limits.</li><li>Verstöße können zu Stummschaltung, Kick oder dauerhaftem Ban führen.</li>',
+    rules_accept: 'Ich habe das Regelwerk gelesen und akzeptiere es.',
+    err_rules: 'Bitte akzeptiere zuerst das Studio-Regelwerk.',
     auth_submit: 'Weiter ins Studio',
     auth_connecting: 'Verbinde...',
 
@@ -62,6 +144,7 @@ const I18N = {
     btn_close: 'Schließen',
 
     top_dev_exports: 'DEV .WAV EXPORTE:',
+    top_online: 'ONLINE',
     top_tester_code: 'Tester-Code',
     top_login_btn: 'Anmelden / Registrieren',
     top_logout_btn: 'Abmelden',
@@ -75,21 +158,22 @@ const I18N = {
     fb_hint_guest: 'Wird gesendet als: Gast',
     fb_hint_user: 'Wird gesendet als: {user} ({role})',
 
+    hero_beginner_tag: 'FÜR ANFÄNGER',
     hero_title_html: 'Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio',
-    hero_desc: 'Synthesizer-Werkstatt für eigene Hardtekk- & Uptempo-Kicks, Basslines, Snares/Claps/Rims, Hat-Rolls und komplette Rave-Melodien mit exakter Zahleneingabe.',
+    hero_desc: 'Einsteigerfreundliche Synthesizer-Werkstatt speziell für Anfänger – bau dir eigene Hardtekk- & Uptempo-Kicks, Basslines, Snares, Hat-Rolls und Rave-Melodien (mit ?-Erklärungen an jedem Regler).',
     hero_notice_html: '<strong>Wofür ist diese Website?</strong> Hier werden <strong>keine fertigen KI-Lieder</strong> generiert! Du baust dir hier per Echtzeit-Synthese eigene Kicks, Bässe, Snares, Melodie-Phrasen und komplette Pattern-Loops als <strong>.WAV-Samples</strong>, um sie danach auf deiner <strong>Korg Electribe 2</strong> oder in <strong>FL Studio</strong> zu arrangieren, zu schneiden und weiterzubearbeiten.',
     hero_status_right: 'KEINE KI · 100% SYNTHESE',
     hero_status_ready: 'BEREIT ZUM SCHRAUBEN',
     hero_discord_pill: 'Discord Server',
 
-    cl_title: 'Neu in Version 0.4',
+    cl_title: 'Neu in Version 0.5',
     cl_korg_btn: 'Korg Live öffnen →',
-    cl_1_title: 'DE / EN & Live-Chat',
-    cl_1_html: 'Komplette <strong>DE / EN</strong>-Übersetzung, geschützter Studio-Chat mit Rollen-Badges &amp; Entwickler-Moderation.',
-    cl_2_title: 'Creator-Rolle & Preset-Wall',
-    cl_2_html: 'Neue <strong>Creator</strong>-Rolle mit Community Preset-Wall zum Teilen &amp; 1-Klick-Laden von Kicks, Uptempo &amp; Bass.',
-    cl_3_title: 'Voice-Tag & Live-Oszilloskop',
-    cl_3_html: 'Neuer <strong>Producer Tag &amp; Voice</strong> Generator, Echtzeit-Wellenform, 2-Stufen-Uptempo &amp; Korg-Kurznamen.',
+    cl_1_title: 'Hardtekk Kick Lab (Distortion)',
+    cl_1_html: 'Eigenes <strong>Kick Lab</strong> mit 3-stufiger Verzerrung (Saturation, Hard-Clip, Wavefold), Bitcrush, Sub-Layer &amp; Wellenform.',
+    cl_2_title: 'Aufgeräumtes Studio-Layout',
+    cl_2_html: 'Neue <strong>Sticky Navigation</strong>, kompaktere Topbar und einklappbare Info-Bereiche für schnelleren Zugriff auf die Module.',
+    cl_3_title: 'Korg Live Studio v0.5',
+    cl_3_html: '<strong>Audio-In Gain</strong>-Regler, Quick-Themes, Wake Lock, editierbarer Untertitel, Auto-Save &amp; versteckter Mauszeiger im HUD-Aus-Modus.',
 
     dc_pill: 'DISCORD COMMUNITY · SVENTEKK-LAB',
     dc_title: 'Du willst Tester oder Creator werden?',
@@ -128,6 +212,31 @@ const I18N = {
     tag_rec_ready: '✔ Aufnahme bereit – jetzt mit Rave-FX anhören oder als .WAV laden!',
     tag_need_rec: 'Bitte zuerst über "🎙 3s Aufnehmen" deine Stimme einsprechen.',
     tag_wip_notice: '⚠️ Keine fertige Version – dieses Modul befindet sich noch in Entwicklung.',
+
+    lab_title: 'Hardtekk Kick Lab (Distortion)',
+    lab_sub: 'Baue deinen eigenen Hardtekk-Kick: Basis wählen, dann in 3 Stufen verzerren und per EQ ausformen.',
+    lab_preset_label: 'PRESETS',
+    lab_base_label: 'BASIS-KICK',
+    lab_start: 'Start-Frequenz (Klick)',
+    lab_end: 'End-Frequenz (Sub)',
+    lab_sat: 'Saturation (warm)',
+    lab_clip: 'Hard-Clip (Biss)',
+    lab_fold: 'Wavefold (Obertöne)',
+    lab_crush: 'Bitcrush (Rauheit)',
+    lab_sub: 'Sauberer Sub-Layer',
+    lab_mid: 'Mitten-Cut (Hohlheit)',
+    lab_bite: 'Bite (Höhen-Punch)',
+    lab_preview_label: 'Kick-Wellenform (Vorschau, orange = hartes Clipping)',
+    lab_seq_off: 'Kick im Sequenzer: AUS',
+    lab_seq_on: 'Kick im Sequenzer: AN',
+
+    nav_synth: 'Synth-Module',
+    nav_lab: 'Kick Lab',
+    nav_seq: 'Sequenzer',
+    nav_presets: 'Presets',
+    nav_feedback: 'Feedback',
+    dc_more: 'Was bringen Tester & Creator?',
+    lib_fold: 'Sample-Library: eigene Clips vorhören',
 
     preset_wall_title: 'Creator Preset-Wall',
     preset_wall_badge: 'COMMUNITY PRESETS',
@@ -254,6 +363,9 @@ const I18N = {
     fb_min_chars: 'Bitte schreibe mindestens 3 Zeichen Feedback.',
 
     admin_title: 'Nutzer-Ränge, Moderation & Feedback-Eingang',
+    admin_stat_total_label: 'REGISTRIERTE ACCOUNTS',
+    admin_stat_24h_label: 'HEUTE ANGEMELDET (24H)',
+    admin_stat_team_label: 'TESTER / CREATOR / DEV',
     admin_refresh: '↻ Aktualisieren',
     admin_users_title_html: 'Registrierte Accounts, Ränge &amp; Moderation (<code>studio_profiles</code>)',
     admin_users_sub_html: 'Als <strong>Entwickler</strong> kannst du Ränge (<code>free</code>, <code>tester</code>, <code>creator</code>, <code>entwickler</code>) vergeben sowie Nutzer stummen, kicken oder bannen.',
@@ -311,6 +423,10 @@ const I18N = {
     auth_label_code: 'TESTER CODE (OPTIONAL)',
     auth_ph_code: 'Leave empty for Free account',
     auth_security_html: '🔒 <strong>Secure Cloud Login:</strong> Encrypted session &amp; password protection via Supabase Auth.',
+    rules_title: '📜 SVENTEKK Studio Rules',
+    rules_list_html: '<li><strong>No unconstitutional, extremist, hate-promoting or illegal usernames &amp; content</strong> (results in an immediate ban).</li><li>Be respectful in Live Chat &amp; Feedback (no hate speech or insults).</li><li>No spam, no unauthorized ads and no fake or multi-accounts.</li><li>No exploiting bugs or bypassing the 24h export limit.</li><li>Violations may result in a mute, kick or permanent ban.</li>',
+    rules_accept: 'I have read and accept the Studio Rules.',
+    err_rules: 'Please accept the Studio Rules first.',
     auth_submit: 'Enter Studio',
     auth_connecting: 'Connecting...',
 
@@ -332,6 +448,7 @@ const I18N = {
     btn_close: 'Close',
 
     top_dev_exports: 'DEV .WAV EXPORTS:',
+    top_online: 'ONLINE',
     top_tester_code: 'Tester Code',
     top_login_btn: 'Sign In / Register',
     top_logout_btn: 'Sign Out',
@@ -345,21 +462,22 @@ const I18N = {
     fb_hint_guest: 'Sending as: Guest',
     fb_hint_user: 'Sending as: {user} ({role})',
 
+    hero_beginner_tag: 'BEGINNER FRIENDLY',
     hero_title_html: 'Hardtekk &amp; <span class="accent">Uptempo</span> Sample Studio',
-    hero_desc: 'Real-time synthesizer workshop for custom Hardtekk & Uptempo kicks, basslines, snares/claps/rims, hat rolls and full rave melodies with exact numeric input.',
+    hero_desc: 'Beginner-friendly synthesizer workshop built for newcomers – create your own Hardtekk & Uptempo kicks, basslines, snares, hat rolls and rave melodies (with ? help on every knob).',
     hero_notice_html: '<strong>What is this website for?</strong> No AI-generated songs here! You synthesize your own kicks, basses, snares, melody phrases and full pattern loops as <strong>.WAV samples</strong> to arrange, chop and process on your <strong>Korg Electribe 2</strong> or in <strong>FL Studio</strong>.',
     hero_status_right: 'NO AI · 100% SYNTHESIS',
     hero_status_ready: 'READY TO SYNTHESIZE',
     hero_discord_pill: 'Discord Server',
 
-    cl_title: 'New in Version 0.4',
+    cl_title: 'New in Version 0.5',
     cl_korg_btn: 'Open Korg Live →',
-    cl_1_title: 'DE / EN & Live Chat',
-    cl_1_html: 'Full <strong>DE / EN</strong> translation, members-only Studio Chat with visible role badges &amp; developer moderation.',
-    cl_2_title: 'Creator Role & Preset Wall',
-    cl_2_html: 'New <strong>Creator</strong> role with a Community Preset Wall to share &amp; 1-click load Kicks, Uptempo &amp; Bass.',
-    cl_3_title: 'Voice Tag & Live Scope',
-    cl_3_html: 'New <strong>Producer Tag &amp; Voice</strong> generator, live oscilloscope, 2-stage Uptempo engine &amp; short Korg filenames.',
+    cl_1_title: 'Hardtekk Kick Lab (Distortion)',
+    cl_1_html: 'Dedicated <strong>Kick Lab</strong> with 3-stage distortion (Saturation, Hard Clip, Wavefold), Bitcrush, clean Sub layer &amp; waveform.',
+    cl_2_title: 'Cleaner Studio Layout',
+    cl_2_html: 'New <strong>Sticky Navigation</strong>, slimmer topbar and collapsible info panels for instant access to all synth modules.',
+    cl_3_title: 'Korg Live Studio v0.5',
+    cl_3_html: '<strong>Audio-In Gain</strong> knob, quick show themes, Wake Lock, editable subtitle, auto-save &amp; auto-hidden cursor.',
 
     dc_pill: 'DISCORD COMMUNITY · SVENTEKK-LAB',
     dc_title: 'Want to become a Tester or Creator?',
@@ -398,6 +516,31 @@ const I18N = {
     tag_rec_ready: '✔ Recording ready – preview with Rave FX or export .WAV!',
     tag_need_rec: 'Please record your voice first using "🎙 Record 3s".',
     tag_wip_notice: '⚠️ Not a final version – this module is still in development.',
+
+    lab_title: 'Hardtekk Kick Lab (Distortion)',
+    lab_sub: 'Build your own Hardtekk kick: pick a base, distort it in 3 stages and shape it with EQ.',
+    lab_preset_label: 'PRESETS',
+    lab_base_label: 'BASE KICK',
+    lab_start: 'Start Frequency (Click)',
+    lab_end: 'End Frequency (Sub)',
+    lab_sat: 'Saturation (Warm)',
+    lab_clip: 'Hard Clip (Bite)',
+    lab_fold: 'Wavefold (Harmonics)',
+    lab_crush: 'Bitcrush (Grit)',
+    lab_sub: 'Clean Sub Layer',
+    lab_mid: 'Mid Cut (Hollow)',
+    lab_bite: 'Bite (High Punch)',
+    lab_preview_label: 'Kick waveform (preview, orange = hard clipping)',
+    lab_seq_off: 'Sequencer kick: OFF',
+    lab_seq_on: 'Sequencer kick: ON',
+
+    nav_synth: 'Synth Modules',
+    nav_lab: 'Kick Lab',
+    nav_seq: 'Sequencer',
+    nav_presets: 'Presets',
+    nav_feedback: 'Feedback',
+    dc_more: 'What do Testers & Creators get?',
+    lib_fold: 'Sample Library: preview your own clips',
 
     preset_wall_title: 'Creator Preset Wall',
     preset_wall_badge: 'COMMUNITY PRESETS',
@@ -524,6 +667,9 @@ const I18N = {
     fb_min_chars: 'Please write at least 3 characters of feedback.',
 
     admin_title: 'User Roles, Moderation & Feedback Inbox',
+    admin_stat_total_label: 'REGISTERED ACCOUNTS',
+    admin_stat_24h_label: 'SIGNED IN TODAY (24H)',
+    admin_stat_team_label: 'TESTER / CREATOR / DEV',
     admin_refresh: '↻ Refresh',
     admin_users_title_html: 'Registered Accounts, Roles &amp; Moderation (<code>studio_profiles</code>)',
     admin_users_sub_html: 'As <strong>Developer</strong> you can assign roles (<code>free</code>, <code>tester</code>, <code>creator</code>, <code>entwickler</code>) and mute, kick or ban users.',
@@ -652,6 +798,7 @@ function applyTranslations() {
     authTitle.textContent = authMode === 'login' ? t('auth_title_login') : t('auth_title_register');
   }
 
+  if (typeof updateLabSeqButton === 'function') updateLabSeqButton();
   if (typeof setMelodyButtonState === 'function' && typeof isMelodyPlaying !== 'undefined') {
     setMelodyButtonState(isMelodyPlaying);
   }
@@ -663,9 +810,212 @@ function applyTranslations() {
   updateAccountUI();
   renderChatUI();
   renderCreatorPresetsUI();
+  initHelpToggles();
+  updateHelpTexts();
   if (currentUser && canViewAdminPanel(currentUser)) {
     loadAdminData();
   }
+}
+
+const HELP_TEXTS = {
+  de: {
+    mod_kick: 'Erzeugt klassische Hardtekk-, Gabber-, Industrial-, Schranz- & Hard-Techno-Kicks per Pitch-Sweep und Verzerrer.',
+    mod_uptempo: '2-stufige Uptempo-Engine: Trennt den harten Piep-/Tok-Anschlag vorne vom sägenden, hart geclippten Tail.',
+    mod_bass: 'Baut Sub-Bässe, Offbeat-Saws und Dark Reese Bässe mit Tiefpass-Filter, Resonanz und Sättigung.',
+    mod_lab: 'Distortion-Labor nur für Kicks: Erst Basis-Kick wählen, dann in 3 Stufen verzerren und mit sauberem Sub + EQ formen.',
+    mod_snare: 'Synthetisiert Tekk-Snares, Rave-Claps, Industrial-Rims sowie schnelle 16tel-Hi-Hat Rolls.',
+    mod_melody: 'Erzeugt komplette Rave- & Hardtekk-Melodie-Phrasen über 1–16 Takte in verschiedenen Tonarten.',
+    mod_tag: 'Würfelt Producer-Namen, spricht Tags vor und nimmt 3s Mikrofon mit Rave-FX für die Korg auf (noch in Entwicklung).',
+
+    start_hz: 'Bestimmt, wie hoch der Klick ganz am Anfang der Kick startet – höher = mehr Knack.',
+    end_hz: 'Ziel-Frequenz des Sub-Basses (ca. 40–55 Hz für tiefen Club-Druck).',
+    kick_punch: 'Wie schnell der Ton von hoch nach tief fällt – höher = knackigerer Punch.',
+    kick_tail: 'Lautstärke und Dicke des tiefen Sub-Ausklangs (Rumble).',
+    kick_crunch: 'Mischt gefiltertes Rauschen in die Zerre – ideal für Schranz & Industrial.',
+    drive: 'Stärke der Verzerrung (WaveShaper) – je höher, desto härter und rauer der Kick.',
+    dauer: 'Gesamtlänge des Kicks in Sekunden (kürzer für schnelles Tempo, länger für Rumble).',
+
+    up_start: 'Tonhöhe des vorderen Piep-/Tok-Anschlags – höher = typischer heller Piep-Kick.',
+    up_end: 'Grundton des Bass-Bauchs nach dem Anschlag (meist 48–70 Hz).',
+    up_zaag: 'Lautstärke der sägenden Zaag-Oszillatoren im Tail nach dem Tok.',
+    up_snap: 'Wie schnell der Anschlag in den Bass abfällt (in ms) – kürzer = aggressiver.',
+    up_drive: 'Härte der 2-stufigen Hardcore-Distortion & Brickwall-Clipper.',
+    up_dauer: 'Länge der Uptempo-Kick (bei 210+ BPM meist kurz um 0.22–0.32 s).',
+
+    bass_freq: 'Grundton-Frequenz des Basses (ca. 45–65 Hz für fetten Druck).',
+    bass_sub: 'Anteil des reinen Sinus-Subbasses unter den Obertönen.',
+    bass_cutoff: 'Öffnet den Tiefpass-Filter – höher = mehr Knurren und Sägezahn-Präsenz.',
+    bass_res: 'Betonung an der Filter-Grenze – macht den Bass säureartiger und bissiger.',
+    bass_drive: 'Verzerrung und Sättigung des Basses für mehr Durchsetzungskraft.',
+    bass_dauer: 'Ausklang-Länge des Bass-Tons (kurz für Offbeat, lang für Reese).',
+
+    lab_start: 'Start-Frequenz des Klicks am Anfang des Basis-Kicks.',
+    lab_end: 'Tiefe Grundfrequenz des Kicks (Sub-Fundament).',
+    lab_dauer: 'Gesamtlänge des erzeugten Kicks in Sekunden.',
+    lab_sat: 'Weiche Röhren-/Band-Sättigung – macht den Kick warm und dicht.',
+    lab_clip: 'Hartes Abschneiden der Spitzen – sorgt für den direkten Hardtekk-Biss.',
+    lab_fold: 'Faltet die Welle bei Übersteuerung um – erzeugt aggressive metallische Obertöne.',
+    lab_crush: 'Senkt die digitale Auflösung für rauen Lo-Fi- / Oldschool-Sampler-Charakter.',
+    lab_sub: 'Mischt einen unverzerrten Sinus-Sub darunter, damit der Druck nicht verloren geht.',
+    lab_mid: 'Senkt matschige Mitten bei 380 Hz ab – sorgt für den hohlen Tekk-Charakter.',
+    lab_bite: 'Hebt Präsenz-Höhen bei 2.4 kHz an, damit der Kick sich im Mix durchsetzt.',
+
+    snare_tone: 'Grundton-Höhe des Snare-/Rim-Kessels.',
+    snare_len: 'Wie lange die Snare/Clap ausklingt.',
+    snare_filter: 'Hochpass-Filter für das Rauschen – höher = dünner/schärfer, tiefer = bauchiger.',
+    snare_drive: 'Verzerrung für härtere, druckvollere Snares und Rims.',
+    hat_hits: 'Anzahl der Hi-Hat-Schläge im Roll (im aktuellen Master-Tempo).',
+
+    melody_bars: 'Länge der Melodie in Takten (1 Takt = 8 Noten) für Vorschau und .WAV-Export.',
+    melody_gate: 'Wie lang jede einzelne Note gespielt wird – kurz = staccato, hoch = voll.',
+    mel_cutoff: 'Helligkeit des Synthesizers (Tiefpass-Filter) von dumpf bis grell.',
+
+    tag_pitch: 'Stimm-Tonhöhe (tiefer = dunkler/fetter, höher = heller).',
+    tag_speed: 'Wie schnell die Stimme den Text spricht.',
+    tag_drive: 'Verzerrung/Härte auf deiner 3s-Mikrofon-Aufnahme (mit Echo-FX).',
+
+    bpm: 'Master-Geschwindigkeit in Beats Pro Minute für Sequenzer, Hat-Rolls & Melodien.'
+  },
+  en: {
+    mod_kick: 'Generates classic Hardtekk, Gabber, Industrial, Schranz & Hard Techno kicks via pitch sweep and distortion.',
+    mod_uptempo: '2-stage Uptempo engine: separates the sharp Piep/Tok transient up front from the sawtooth clipped tail.',
+    mod_bass: 'Builds Sub basses, Offbeat saws and Dark Reese basses with lowpass filter, resonance and saturation.',
+    mod_lab: 'Distortion lab for kicks only: pick a base kick, distort in 3 stages, then shape with clean sub + EQ.',
+    mod_snare: 'Synthesizes Tekk snares, Rave claps, Industrial rims and 16th-note hi-hat rolls.',
+    mod_melody: 'Creates complete Rave & Hardtekk melody phrases across 1–16 bars in different scales.',
+    mod_tag: 'Generates producer names, previews voice tags and records 3s mic input with rave FX for Korg (WIP).',
+
+    start_hz: 'Starting pitch of the click right at the beginning of the kick – higher = sharper snap.',
+    end_hz: 'Target sub-bass frequency (around 40–55 Hz for deep club weight).',
+    kick_punch: 'How fast the pitch drops from high to low – higher = punchier attack.',
+    kick_tail: 'Volume and thickness of the low sub-bass tail / rumble.',
+    kick_crunch: 'Blends filtered noise into the distortion – great for Schranz & Industrial.',
+    drive: 'Distortion intensity (WaveShaper) – higher values make the kick harder and grittier.',
+    dauer: 'Total kick length in seconds (shorter for fast BPM, longer for rumble).',
+
+    up_start: 'Pitch of the front Piep/Tok transient – higher = brighter Piep kick.',
+    up_end: 'Fundamental frequency of the bass body after the transient (typically 48–70 Hz).',
+    up_zaag: 'Level of the sawtooth Zaag oscillators in the tail behind the tok.',
+    up_snap: 'How fast the transient drops into the bass (in ms) – shorter = more aggressive.',
+    up_drive: 'Hardness of the 2-stage hardcore distortion & brickwall clipper.',
+    up_dauer: 'Length of the Uptempo kick (keep short ~0.22–0.32 s at 210+ BPM).',
+
+    bass_freq: 'Root pitch of the bassline (around 45–65 Hz for heavy low-end).',
+    bass_sub: 'Amount of clean sine sub-bass underneath the harmonics.',
+    bass_cutoff: 'Opens the lowpass filter – higher = more growl and sawtooth presence.',
+    bass_res: 'Resonance peak at the filter cutoff – adds acid-like bite.',
+    bass_drive: 'Saturation and distortion for extra presence in the mix.',
+    bass_dauer: 'Decay length of the bass note (short for offbeat, long for Reese).',
+
+    lab_start: 'Starting click frequency at the beginning of the base kick.',
+    lab_end: 'Deep root frequency of the kick sub foundation.',
+    lab_dauer: 'Total duration of the generated kick in seconds.',
+    lab_sat: 'Soft saturation – adds warmth and density before hard clipping.',
+    lab_clip: 'Hard clipping – cuts peaks flat for classic Hardtekk punch and bite.',
+    lab_fold: 'Wavefolding – folds peaks back to create aggressive metallic harmonics.',
+    lab_crush: 'Reduces bit depth for gritty lo-fi / oldschool sampler texture.',
+    lab_sub: 'Blends a clean, undistorted sine sub underneath to keep low-end weight.',
+    lab_mid: 'Cuts boxy mids around 380 Hz for that hollow Tekk tone.',
+    lab_bite: 'Boosts presence around 2.4 kHz so the kick cuts through the mix.',
+
+    snare_tone: 'Fundamental pitch of the snare or rim body.',
+    snare_len: 'How long the snare or clap rings out.',
+    snare_filter: 'Highpass filter for the noise layer – higher = thinner/crisper, lower = fuller.',
+    snare_drive: 'Distortion for harder, punchier snares and rims.',
+    hat_hits: 'Number of hi-hat hits in the roll (synced to master BPM).',
+
+    melody_bars: 'Length of the melody in bars (1 bar = 8 notes) for preview and .WAV export.',
+    melody_gate: 'Duration of each individual note – short = staccato, high = full.',
+    mel_cutoff: 'Synth brightness (lowpass filter) from dark to bright.',
+
+    tag_pitch: 'Voice pitch (lower = deeper/heavier, higher = brighter).',
+    tag_speed: 'How fast the voice speaks the text.',
+    tag_drive: 'Distortion/drive applied to your 3s mic recording (with echo FX).',
+
+    bpm: 'Master tempo in Beats Per Minute for sequencer, hat rolls & melodies.'
+  }
+};
+
+function getHelpText(key) {
+  const dict = HELP_TEXTS[currentLang] || HELP_TEXTS.de;
+  return dict[key] || (HELP_TEXTS.de && HELP_TEXTS.de[key]) || '';
+}
+
+function initHelpToggles() {
+  if (document.body.dataset.helpReady === '1') return;
+  document.body.dataset.helpReady = '1';
+
+  // 1. Modul-Erklärungen auf jeder .synth-card[data-help-mod]
+  document.querySelectorAll('.synth-card[data-help-mod]').forEach(card => {
+    const modKey = card.getAttribute('data-help-mod');
+    const top = card.querySelector('.card-top');
+    const titleEl = top ? top.querySelector('h3') : null;
+    if (!top || !titleEl || !modKey) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'help-label-group';
+    titleEl.parentNode.insertBefore(wrap, titleEl);
+    wrap.appendChild(titleEl);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'help-btn';
+    btn.textContent = '?';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', 'Info');
+
+    const box = document.createElement('div');
+    box.className = 'help-box mod-help';
+    box.setAttribute('data-help-key', modKey);
+
+    btn.addEventListener('click', () => {
+      const open = box.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    wrap.appendChild(btn);
+    top.insertAdjacentElement('afterend', box);
+  });
+
+  // 2. Regler-Erklärungen auf jedem .slider-item
+  document.querySelectorAll('.slider-item').forEach(item => {
+    const range = item.querySelector('input[type="range"]');
+    const label = item.querySelector('label');
+    if (!range || !range.id || !label) return;
+    const titleSpan = label.firstElementChild;
+    if (!titleSpan) return;
+
+    const wrap = document.createElement('span');
+    wrap.className = 'help-label-group';
+    label.insertBefore(wrap, titleSpan);
+    wrap.appendChild(titleSpan);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'help-btn';
+    btn.textContent = '?';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', 'Info');
+
+    const box = document.createElement('div');
+    box.className = 'help-box';
+    box.setAttribute('data-help-key', range.id);
+
+    btn.addEventListener('click', () => {
+      const open = box.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    wrap.appendChild(btn);
+    item.appendChild(box);
+  });
+}
+
+function updateHelpTexts() {
+  document.querySelectorAll('.help-box[data-help-key]').forEach(box => {
+    const key = box.getAttribute('data-help-key');
+    box.textContent = getHelpText(key);
+  });
 }
 
 /* =========================================================================
@@ -925,12 +1275,11 @@ function handleForcedLogoutIfModerated(rawErrMsg) {
 
 async function consumeExportCredit() {
   if (!requireLoginOnly()) return false;
-  if (hasUnlimitedExports(currentUser)) return true;
 
   try {
     const result = await sbRpc('consume_export_credit');
     if (result && result.profile) {
-      currentUser = result.profile;
+      currentUser = Object.freeze(result.profile);
     }
     updateAccountUI();
 
@@ -1003,6 +1352,7 @@ async function loadSession() {
 
   updateAccountUI();
   loadCreatorPresets();
+  startPresenceHeartbeat();
   if (currentUser) {
     startChatPolling();
   } else {
@@ -1057,7 +1407,6 @@ function requireLoginOnly() {
 async function submitAuth() {
   const rawUser = document.getElementById('auth-username').value.trim();
   const pass = document.getElementById('auth-password').value;
-  const codeInput = document.getElementById('auth-rolecode').value.trim().toUpperCase();
   const errEl = document.getElementById('auth-error');
   const submitBtn = document.getElementById('btn-auth-submit');
 
@@ -1067,6 +1416,10 @@ async function submitAuth() {
   }
   if (pass.length < 6) {
     errEl.innerText = t('err_password');
+    return;
+  }
+  if (authMode === 'register' && !document.getElementById('auth-rules-check')?.checked) {
+    errEl.innerText = t('err_rules');
     return;
   }
 
@@ -1079,22 +1432,13 @@ async function submitAuth() {
 
     if (authMode === 'register') {
       await sbAuthSignUp(username, pass);
-      let profile = await sbRpc('touch_login');
-      let codeHint = '';
-
-      if (codeInput) {
-        try {
-          profile = await sbRpc('redeem_tester_code', { p_code: codeInput });
-        } catch (codeErr) {
-          codeHint = ' (CODE -> FREE)';
-        }
-      }
+      const profile = await sbRpc('touch_login');
 
       currentUser = profile;
       closeAuthModal();
       updateAccountUI();
       startChatPolling();
-      setStatus(`WELCOME ${username.toUpperCase()} (${getRoleDisplayLabel(getEffectiveRole(currentUser))})${codeHint}`);
+      setStatus(`WELCOME ${username.toUpperCase()} (${getRoleDisplayLabel(getEffectiveRole(currentUser))})`);
     } else {
       await sbAuthSignIn(username, pass);
       try {
@@ -1156,7 +1500,10 @@ function switchAuthTab(mode) {
   document.getElementById('tab-register').classList.toggle('active', mode === 'register');
   document.getElementById('auth-modal-title').innerText =
     mode === 'login' ? t('auth_title_login') : t('auth_title_register');
-  document.getElementById('role-code-field').style.display = mode === 'register' ? 'flex' : 'none';
+  const rulesBox = document.getElementById('register-rules-box');
+  if (rulesBox) rulesBox.style.display = mode === 'register' ? 'block' : 'none';
+  const rulesCheck = document.getElementById('auth-rules-check');
+  if (rulesCheck && mode !== 'register') rulesCheck.checked = false;
   document.getElementById('auth-error').innerText = '';
 }
 
@@ -1717,6 +2064,23 @@ async function loadAdminData() {
     });
     if (!resU.ok) throw new Error(`HTTP ${resU.status}`);
     const users = await resU.json();
+
+    const totalEl = document.getElementById('admin-stat-total');
+    const dayEl = document.getElementById('admin-stat-24h');
+    const teamEl = document.getElementById('admin-stat-team');
+    if (totalEl) totalEl.textContent = String(users.length);
+    if (dayEl) {
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      const last24h = users.filter(u => u.last_login && new Date(u.last_login).getTime() >= cutoff).length;
+      dayEl.textContent = String(last24h);
+    }
+    if (teamEl) {
+      const tCount = users.filter(u => getEffectiveRole(u) === 'tester').length;
+      const cCount = users.filter(u => getEffectiveRole(u) === 'creator').length;
+      const dCount = users.filter(u => getEffectiveRole(u) === 'entwickler').length;
+      teamEl.textContent = `${tCount} / ${cCount} / ${dCount}`;
+    }
+
     tbodyUsers.innerHTML = users.length ? '' : '<tr><td colspan="6">-</td></tr>';
     users.forEach(u => {
       const r = getEffectiveRole(u);

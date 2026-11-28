@@ -278,6 +278,7 @@ function initAllControlBindings() {
   bindSliderAndNumber('tag_pitch', 'num-tag-pitch');
   bindSliderAndNumber('tag_speed', 'num-tag-speed');
   bindSliderAndNumber('tag_drive', 'num-tag-drive');
+  LAB_CONTROLS.forEach(([r, n]) => bindSliderAndNumber(r, n, () => markLabCustom()));
 
   bindSliderAndNumber('bpm', 'num-bpm', (val) => {
     document.getElementById('header-bpm').innerText = val;
@@ -297,7 +298,7 @@ function setKickMode(mode) {
   if (!p) return;
   activeKickMode = mode;
 
-  document.querySelectorAll('.style-btn:not(.up-style):not(.bass-style):not(.snare-style):not(.mel-style)').forEach(btn => {
+  document.querySelectorAll('.style-btn:not(.up-style):not(.bass-style):not(.snare-style):not(.mel-style):not(.lab-style)').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   document.getElementById('kick-mode-badge').innerText = p.label;
@@ -1207,6 +1208,7 @@ function downloadFullSequencer() {
   const rel = getMelodyPreset().release;
   const notes = getActiveMelodyFrequencies();
   const hardParams = getHardtekkParams();
+  const labSeqParams = getLabParams();
   const upParams = getUptempoParams();
   const bassParams = getBassParams();
   const snareParams = getSnareParams();
@@ -1227,7 +1229,11 @@ function downloadFullSequencer() {
       const laneStep = s % 16;
 
       if (sequenceGrid[0][laneStep]) {
+        if (useLabKickInSeq) {
+        triggerLabKick(ctx, out0, labSeqParams, t);
+      } else {
         triggerKick(ctx, out0, hardParams, t);
+      }
       }
       if (sequenceGrid[1][laneStep]) {
         triggerUptempoKick(ctx, out1, upParams, t);
@@ -1483,7 +1489,11 @@ function playStepSounds(step) {
   const notes = getActiveMelodyFrequencies();
 
   if (sequenceGrid[0][step]) {
-    triggerKick(ctx, getTrackOut(ctx, baseDest, 0), getHardtekkParams(), now, 0);
+    if (useLabKickInSeq) {
+      triggerLabKick(ctx, getTrackOut(ctx, baseDest, 0), getLabParams(), now, 0);
+    } else {
+      triggerKick(ctx, getTrackOut(ctx, baseDest, 0), getHardtekkParams(), now, 0);
+    }
   }
   if (sequenceGrid[1][step]) {
     triggerUptempoKick(ctx, getTrackOut(ctx, baseDest, 1), getUptempoParams(), now, 1);
@@ -2212,6 +2222,337 @@ function downloadVoiceTag() {
   });
 }
 
+/* =========================================================================
+   8. HARDTEKK KICK LAB (DISTORTION NUR FÜR KICKS)
+   ========================================================================= */
+const LAB_PRESETS = {
+  tekk:    { label: 'TEKK PUNCH',     tag: 'TEKK', base: 'sine',     start: 260, end: 48, dauer: 0.42, sat: 0.55, clip: 0.50, fold: 0.15, crush: 0.00, sub: 0.40, mid: 5, bite: 4 },
+  schranz: { label: 'SCHRANZ RUMBLE', tag: 'SCHR', base: 'triangle', start: 220, end: 44, dauer: 0.55, sat: 0.70, clip: 0.60, fold: 0.25, crush: 0.10, sub: 0.50, mid: 7, bite: 3 },
+  gabber:  { label: 'GABBER CRUNCH',  tag: 'GAB',  base: 'triangle', start: 420, end: 52, dauer: 0.38, sat: 0.85, clip: 0.85, fold: 0.10, crush: 0.25, sub: 0.30, mid: 3, bite: 6 },
+  terror:  { label: 'TERROR CLIP',    tag: 'TER',  base: 'click',    start: 520, end: 56, dauer: 0.30, sat: 0.90, clip: 0.95, fold: 0.55, crush: 0.45, sub: 0.25, mid: 4, bite: 9 }
+};
+
+const LAB_CONTROLS = [
+  ['lab_start', 'num-lab-start', 'start'],
+  ['lab_end', 'num-lab-end', 'end'],
+  ['lab_dauer', 'num-lab-dauer', 'dauer'],
+  ['lab_sat', 'num-lab-sat', 'sat'],
+  ['lab_clip', 'num-lab-clip', 'clip'],
+  ['lab_fold', 'num-lab-fold', 'fold'],
+  ['lab_crush', 'num-lab-crush', 'crush'],
+  ['lab_sub', 'num-lab-sub', 'sub'],
+  ['lab_mid', 'num-lab-mid', 'mid'],
+  ['lab_bite', 'num-lab-bite', 'bite']
+];
+
+let activeLabPreset = 'tekk';
+let activeLabBase = 'sine';
+let useLabKickInSeq = false;
+let labPreviewTimer = null;
+let labPreviewSeq = 0;
+const labCurveCache = new Map();
+
+function makeLabCurve(kind, amount) {
+  const key = `${kind}:${amount.toFixed(2)}`;
+  if (labCurveCache.has(key)) return labCurveCache.get(key);
+
+  const n = 8192;
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / (n - 1) - 1;
+    let y;
+    if (kind === 'sat') {
+      const k = 1 + amount * 9;
+      y = Math.tanh(x * k) / Math.tanh(k);
+    } else if (kind === 'clip') {
+      const g = 1 + amount * 7;
+      const thr = 1 - amount * 0.45;
+      y = Math.max(-thr, Math.min(thr, x * g)) / thr;
+    } else if (kind === 'fold') {
+      const g = 1 + amount * 3.2;
+      y = Math.sin(x * g * Math.PI / 2);
+    } else {
+      const bits = 16 - amount * 13;
+      const lv = Math.pow(2, bits) / 2;
+      y = Math.round(x * lv) / lv;
+    }
+    curve[i] = Math.max(-1, Math.min(1, y));
+  }
+  labCurveCache.set(key, curve);
+  return curve;
+}
+
+function getLabParams() {
+  const num = (id, def) => {
+    const v = parseFloat(document.getElementById(id)?.value);
+    return Number.isNaN(v) ? def : v;
+  };
+  return {
+    base: activeLabBase,
+    tag: activeLabPreset === 'custom' ? 'LAB' : (LAB_PRESETS[activeLabPreset]?.tag || 'LAB'),
+    startHz: num('lab_start', 260),
+    endHz: num('lab_end', 48),
+    duration: num('lab_dauer', 0.42),
+    sat: num('lab_sat', 0.55),
+    clip: num('lab_clip', 0.5),
+    fold: num('lab_fold', 0.15),
+    crush: num('lab_crush', 0),
+    sub: num('lab_sub', 0.4),
+    midCut: num('lab_mid', 5),
+    bite: num('lab_bite', 4)
+  };
+}
+
+function triggerLabKick(ctx, dest, params, startTime, trackIdx = null) {
+  const {
+    base = 'sine', startHz = 260, endHz = 48, duration = 0.42,
+    sat = 0.55, clip = 0.5, fold = 0.15, crush = 0,
+    sub = 0.4, midCut = 5, bite = 4
+  } = params;
+
+  const t0 = Math.max(0, startTime);
+  const dur = Math.max(0.15, duration);
+  const dropT = base === 'triangle' ? 0.05 : base === 'click' ? 0.04 : 0.07;
+  const stopAt = t0 + dur + 0.03;
+
+  // 1. Basis-Kick (Pitch-Drop)
+  const osc = ctx.createOscillator();
+  osc.type = base === 'triangle' ? 'triangle' : 'sine';
+  osc.frequency.setValueAtTime(startHz, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(30, endHz * 1.15), t0 + dropT);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(28, endHz * 0.9), t0 + dur);
+
+  const bodyGain = ctx.createGain();
+  bodyGain.gain.setValueAtTime(0.0001, t0);
+  bodyGain.gain.linearRampToValueAtTime(1.0, t0 + 0.002);
+  bodyGain.gain.setValueAtTime(0.92, t0 + Math.min(dur * 0.55, 0.26));
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+
+  const preBus = ctx.createGain();
+  osc.connect(bodyGain);
+  bodyGain.connect(preBus);
+
+  let clickSrc = null;
+  if (base === 'click') {
+    const len = Math.max(1, Math.floor(ctx.sampleRate * 0.012));
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    clickSrc = ctx.createBufferSource();
+    clickSrc.buffer = buf;
+    const clickHp = ctx.createBiquadFilter();
+    clickHp.type = 'highpass';
+    clickHp.frequency.setValueAtTime(1800, t0);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.55, t0);
+    clickSrc.connect(clickHp);
+    clickHp.connect(clickGain);
+    clickGain.connect(preBus);
+  }
+
+  // 2. Distortion-Kette (Saturation -> Hard-Clip -> Wavefold -> Bitcrush)
+  let node = preBus;
+  const chain = (next) => { node.connect(next); node = next; };
+  const addShaper = (kind, amount, oversample) => {
+    if (amount <= 0.02) return;
+    const sh = ctx.createWaveShaper();
+    sh.curve = makeLabCurve(kind, amount);
+    sh.oversample = oversample;
+    chain(sh);
+  };
+  addShaper('sat', sat, '4x');
+  addShaper('clip', clip, '4x');
+  addShaper('fold', fold, '4x');
+  addShaper('crush', crush, 'none');
+
+  // 3. Entzerrung nach der Verzerrung
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.setValueAtTime(28, t0);
+  chain(hp);
+
+  const mid = ctx.createBiquadFilter();
+  mid.type = 'peaking';
+  mid.frequency.setValueAtTime(380, t0);
+  mid.Q.setValueAtTime(1.1, t0);
+  mid.gain.setValueAtTime(-Math.abs(midCut), t0);
+  chain(mid);
+
+  const biteEq = ctx.createBiquadFilter();
+  biteEq.type = 'peaking';
+  biteEq.frequency.setValueAtTime(2400, t0);
+  biteEq.Q.setValueAtTime(1.2, t0);
+  biteEq.gain.setValueAtTime(Math.abs(bite), t0);
+  chain(biteEq);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(11000, t0);
+  chain(lp);
+
+  const outGain = ctx.createGain();
+  outGain.gain.setValueAtTime(0.85, t0);
+  outGain.gain.setValueAtTime(0.85, t0 + Math.max(0.05, dur - 0.03));
+  outGain.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+  chain(outGain);
+  outGain.connect(dest);
+
+  // 4. Sauberer Sub-Layer (unverzerrt, für Druck)
+  const subOsc = ctx.createOscillator();
+  subOsc.type = 'sine';
+  subOsc.frequency.setValueAtTime(Math.max(30, Math.min(90, endHz)), t0);
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(0.0001, t0);
+  subGain.gain.linearRampToValueAtTime(Math.max(0.0001, sub * 0.75), t0 + 0.012);
+  subGain.gain.setValueAtTime(Math.max(0.0001, sub * 0.7), t0 + dur * 0.65);
+  subGain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  subOsc.connect(subGain);
+  subGain.connect(dest);
+
+  osc.start(t0);
+  subOsc.start(t0);
+  if (clickSrc) clickSrc.start(t0);
+  osc.stop(stopAt);
+  subOsc.stop(stopAt);
+  if (clickSrc) clickSrc.stop(t0 + 0.02);
+
+  registerVoice(trackIdx, () => {
+    try {
+      outGain.gain.cancelScheduledValues(ctx.currentTime);
+      outGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      subGain.gain.cancelScheduledValues(ctx.currentTime);
+      subGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      osc.stop();
+      subOsc.stop();
+      if (clickSrc) clickSrc.stop();
+    } catch (e) {}
+  });
+}
+
+function setLabPreset(key, silent = false) {
+  const p = LAB_PRESETS[key];
+  if (!p) return;
+  activeLabPreset = key;
+  activeLabBase = p.base;
+  LAB_CONTROLS.forEach(([r, n, k]) => setControlValue(r, n, p[k]));
+
+  document.querySelectorAll('.lab-preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.labpreset === key);
+  });
+  document.querySelectorAll('.lab-base-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.labbase === p.base);
+  });
+  const badge = document.getElementById('lab-badge');
+  if (badge) badge.innerText = p.label;
+
+  scheduleLabPreview();
+  if (!silent) setStatus(`KICK LAB: ${p.label}`);
+}
+
+function setLabBase(base) {
+  activeLabBase = base;
+  document.querySelectorAll('.lab-base-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.labbase === base);
+  });
+  markLabCustom();
+}
+
+function markLabCustom() {
+  if (activeLabPreset !== 'custom') {
+    activeLabPreset = 'custom';
+    document.querySelectorAll('.lab-preset-btn').forEach(b => b.classList.remove('active'));
+    const badge = document.getElementById('lab-badge');
+    if (badge) badge.innerText = 'CUSTOM';
+  }
+  scheduleLabPreview();
+}
+
+function scheduleLabPreview() {
+  if (labPreviewTimer) clearTimeout(labPreviewTimer);
+  labPreviewTimer = setTimeout(drawLabPreview, 90);
+}
+
+async function drawLabPreview() {
+  const canvas = document.getElementById('lab-scope');
+  if (!canvas || typeof OfflineAudioContext === 'undefined') return;
+  const c2 = canvas.getContext('2d');
+  if (!c2) return;
+
+  const mySeq = ++labPreviewSeq;
+  try {
+    const p = getLabParams();
+    const sr = 32000;
+    const off = new OfflineAudioContext(1, Math.ceil(sr * (p.duration + 0.05)), sr);
+    triggerLabKick(off, off.destination, p, 0);
+    const buffer = await off.startRendering();
+    if (mySeq !== labPreviewSeq) return;
+
+    const data = buffer.getChannelData(0);
+    const w = canvas.width;
+    const h = canvas.height;
+    c2.fillStyle = '#07070b';
+    c2.fillRect(0, 0, w, h);
+    c2.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    c2.lineWidth = 1;
+    c2.beginPath();
+    c2.moveTo(0, h / 2);
+    c2.lineTo(w, h / 2);
+    c2.stroke();
+
+    const chunk = Math.max(1, Math.floor(data.length / w));
+    for (let x = 0; x < w; x++) {
+      let mn = 0;
+      let mx = 0;
+      const start = x * chunk;
+      for (let i = 0; i < chunk && start + i < data.length; i++) {
+        const v = data[start + i];
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+      }
+      const hot = Math.max(Math.abs(mn), Math.abs(mx)) > 0.8;
+      c2.strokeStyle = hot ? '#ff8c52' : '#00f0ff';
+      c2.beginPath();
+      c2.moveTo(x + 0.5, h / 2 - mx * (h * 0.46));
+      c2.lineTo(x + 0.5, h / 2 - mn * (h * 0.46));
+      c2.stroke();
+    }
+  } catch (e) {}
+}
+
+async function playLabKick() {
+  if (!requireLoginOnly()) return;
+  const ctx = await ensureAudioReady();
+  const p = getLabParams();
+  triggerLabKick(ctx, getMasterOut(), p, ctx.currentTime + 0.01, 0);
+  setStatus(`PLAYING: KICK LAB ${p.tag}`);
+}
+
+function downloadLabKick() {
+  const p = getLabParams();
+  renderAndDownload(p.duration + 0.12, `KL_${p.tag}_${Math.round(p.startHz)}.wav`,
+    (ctx, dest) => triggerLabKick(ctx, dest, p, 0));
+}
+
+function updateLabSeqButton() {
+  const btn = document.getElementById('btn-lab-seq');
+  if (!btn) return;
+  btn.className = useLabKickInSeq ? 'btn btn-orange' : 'btn btn-ghost';
+  btn.innerText = (typeof t === 'function')
+    ? t(useLabKickInSeq ? 'lab_seq_on' : 'lab_seq_off')
+    : (useLabKickInSeq ? 'Kick im Sequenzer: AN' : 'Kick im Sequenzer: AUS');
+}
+
+function toggleLabSeq() {
+  useLabKickInSeq = !useLabKickInSeq;
+  updateLabSeqButton();
+  setStatus(useLabKickInSeq ? 'SEQUENZER-KICK: KICK LAB' : 'SEQUENZER-KICK: HARDTEKK KICK');
+}
+
+function initLabKick() {
+  setLabPreset('tekk', true);
+  updateLabSeqButton();
+}
+
 applyVersionTags();
 initAllControlBindings();
 buildMelodyNotes();
@@ -2221,6 +2562,7 @@ renderSampleLibrary();
 initFixNotesBox();
 initVoiceList();
 initOscilloscope();
+initLabKick();
 updateDownloadCounterUI();
 if (typeof initLanguage === 'function') initLanguage();
 loadSession();
